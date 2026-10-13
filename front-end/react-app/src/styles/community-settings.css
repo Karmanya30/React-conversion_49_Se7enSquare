@@ -49,7 +49,7 @@ button {
 }
 
 /* ── PAGE SHELL ── */
-.page {
+.cs-page {
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -659,7 +659,7 @@ body.theme-light .sidebar {
 
 
 
-  .page {
+  .cs-page {
     height: auto;
     min-height: 100vh;
     overflow: visible;

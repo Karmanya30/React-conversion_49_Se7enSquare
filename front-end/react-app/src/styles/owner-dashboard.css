@@ -1,0 +1,4 @@
+/* Owner Dashboard — drill-down affordances. Lives in its own file so the
+   shared admin-dashboard.css (used by 5 pages) is never touched. */
+.drill-card{cursor:pointer;transition:transform .15s,border-color .15s}
+.drill-card:hover{transform:translateY(-2px);border-color:rgba(91,110,245,.35)}

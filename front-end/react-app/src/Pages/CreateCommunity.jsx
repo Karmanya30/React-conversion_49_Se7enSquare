@@ -1,9 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import SideBar from '../Components/SideBar';
 import '../styles/global.css';
+import '../styles/sidebar.css';
 import '../styles/create-community.css';
 
 const API_BASE = 'http://localhost:3000/api';
+
+// Same URL shape the legacy wizard validated against.
+const URL_PATTERN = /^(https?:\/\/)?([\w-]+(\.[\w-]+)+)([/\w-]*)*\/?$/i;
 
 const CATEGORIES = ['FPS', 'MOBA', 'RPG', 'Strategy', 'Sports', 'Indie', 'Speedrunning', 'Other'];
 const ICONS = ['⚡', '🚀', '🔥', '🌟', '💡', '🎯', '🏆', '🌐', '⚙'];
@@ -20,19 +25,29 @@ const BANNERS = [
 function getCurrentUser() {
   try {
     const raw = JSON.parse(localStorage.getItem('nexus_user') || localStorage.getItem('currentUser') || '{}');
-    return { id: raw.id || 1, username: raw.username || 'gamer' };
+    return { id: raw.id, username: raw.username, role: raw.role };
   } catch {
-    return { id: 1, username: 'gamer' };
+    return {};
   }
+}
+
+// Extracts the human-readable error message a NestJS response carries
+// (validation failures arrive as arrays of strings).
+async function apiErrorMessage(res) {
+  try {
+    const body = await res.json();
+    const msg = body?.message;
+    return Array.isArray(msg) ? msg.join(', ') : (msg || `HTTP ${res.status}`);
+  } catch { return `HTTP ${res.status}`; }
 }
 
 export default function CreateCommunity() {
   const navigate = useNavigate();
-  const currentUser = getCurrentUser();
 
   const [activeTab, setActiveTab] = useState('community'); // 'community' | 'channel'
   const [currentStep, setCurrentStep] = useState(1);
   const [toastMsg, setToastMsg] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
   // Form State - Community
   const [name, setName] = useState('');
@@ -78,10 +93,11 @@ export default function CreateCommunity() {
   };
 
   useEffect(() => {
-    fetch(`${API_BASE}/communities`)
+    const role = getCurrentUser().role || 'user';
+    fetch(`${API_BASE}/communities`, { headers: { 'x-role': role } })
       .then((r) => (r.ok ? r.json() : []))
       .then((data) => {
-        if (data && data.length > 0) {
+        if (Array.isArray(data) && data.length > 0) {
           setAllCommunities(data);
           setChannelCommId(String(data[0].id));
         }
@@ -114,14 +130,41 @@ export default function CreateCommunity() {
     setChannels(channels.filter((c) => c.id !== id));
   };
 
+  // Limits mirror the backend CreateCommunityDto so users never type a
+  // payload the server would reject.
   const validateStep = (step) => {
     if (step === 1) {
-      if (!name.trim() || name.length < 3) {
+      const n = name.trim();
+      if (n.length < 3) {
         showToast('⚠️ Community name must be at least 3 characters');
         return false;
       }
-      if (!desc.trim() || desc.length < 10) {
+      if (n.length > 50) {
+        showToast('⚠️ Community name must be at most 50 characters');
+        return false;
+      }
+      const d = desc.trim();
+      if (d.length < 10) {
         showToast('⚠️ Description must be at least 10 characters');
+        return false;
+      }
+      if (d.length > 200) {
+        showToast('⚠️ Description must be at most 200 characters');
+        return false;
+      }
+    }
+    if (step === 2) {
+      if (website.trim() && !URL_PATTERN.test(website.trim())) {
+        showToast('⚠️ Please enter a valid website URL');
+        return false;
+      }
+      const tagList = tags.split(',').map((t) => t.trim()).filter(Boolean);
+      if (tagList.length > 5) {
+        showToast('⚠️ Up to 5 tags are allowed');
+        return false;
+      }
+      if (tagList.some((t) => t.length < 2 || t.length > 20)) {
+        showToast('⚠️ Each tag must be 2–20 characters');
         return false;
       }
     }
@@ -144,22 +187,33 @@ export default function CreateCommunity() {
   };
 
   const submitCreateCommunity = async () => {
+    if (submitting) return;
+    const user = getCurrentUser();
+    if (!user.id) {
+      showToast('⚠️ You must be logged in to create a community.');
+      return;
+    }
+    setSubmitting(true);
     showToast('🚀 Creating community…');
     const channelNames = channels.map((c) => c.name);
+    const tagList = tags.split(',').map((t) => t.trim()).filter(Boolean);
 
     const payload = {
-      name,
-      description: desc,
-      ownerId: currentUser.id,
+      name: name.trim(),
+      description: desc.trim(),
+      ownerId: Number(user.id),
       category,
       icon,
       banner,
       slug: slug || 'community',
       channels: channelNames.length ? channelNames : ['general'],
-      tags: tags ? tags.split(',').map((t) => t.trim()) : [category.toLowerCase()],
+      tags: tagList.length ? tagList : [category.toLowerCase()],
       visibility: privacy,
       memberCount: 1,
       onlineCount: 1,
+      ...(rules.trim()
+        ? { rules: rules.trim().split('\n').map((r) => r.trim()).filter(Boolean) }
+        : {}),
     };
 
     try {
@@ -167,16 +221,22 @@ export default function CreateCommunity() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-role': currentUser.role || 'user',
+          'x-role': user.role || 'user',
         },
         body: JSON.stringify(payload),
       });
 
-      let created = null;
-      if (res.ok) {
-        created = await res.json();
-      } else {
-        created = { ...payload, id: Date.now() };
+      if (!res.ok) {
+        // Real HTTP rejection (validation error, free-plan community cap, …) —
+        // surface it instead of faking success.
+        showToast(`⚠️ Could not create community: ${await apiErrorMessage(res)}`);
+        return;
+      }
+
+      const created = await res.json();
+      if (!created || !created.id) {
+        showToast('⚠️ Unexpected response from the server.');
+        return;
       }
 
       // Add to local joined communities
@@ -193,11 +253,10 @@ export default function CreateCommunity() {
       setTimeout(() => {
         navigate(`/community-page?id=${created.id}`);
       }, 1000);
-    } catch {
-      showToast('🎉 Community created! Redirecting…');
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 1000);
+    } catch (err) {
+      showToast(`⚠️ Could not reach the backend: ${err.message}`);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -206,32 +265,55 @@ export default function CreateCommunity() {
       showToast('⚠️ Channel name is required');
       return;
     }
+    if (!standaloneChTopic.trim()) {
+      showToast('⚠️ Channel topic is required');
+      return;
+    }
+    if (!channelCommId) {
+      showToast('⚠️ Select a community first');
+      return;
+    }
+    const user = getCurrentUser();
+    const role = user.role || 'user';
     showToast('💬 Creating channel…');
     try {
-      await fetch(`${API_BASE}/channels`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          communityId: Number(channelCommId),
-          name: standaloneChName.trim().toLowerCase().replace(/\s+/g, '-'),
-          type: standaloneChType,
-          topic: standaloneChTopic,
-        }),
+      // Channels live on the community record — no dedicated /channels API.
+      const commRes = await fetch(`${API_BASE}/communities/${channelCommId}`, {
+        headers: { 'x-role': role },
       });
-      showToast('✅ Channel created!');
+      if (!commRes.ok) {
+        showToast(`⚠️ Could not load community: ${await apiErrorMessage(commRes)}`);
+        return;
+      }
+      const community = await commRes.json();
+      const existing = Array.isArray(community.channels) ? community.channels : [];
+      const newChannel = {
+        id: String(Date.now()),
+        name: standaloneChName.trim().toLowerCase().replace(/\s+/g, '-'),
+        type: standaloneChType,
+      };
+      const patchRes = await fetch(`${API_BASE}/communities/${channelCommId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-role': role },
+        body: JSON.stringify({ channels: [...existing, newChannel] }),
+      });
+      if (!patchRes.ok) {
+        showToast(`⚠️ Could not create channel: ${await apiErrorMessage(patchRes)}`);
+        return;
+      }
+      showToast(`✅ #${newChannel.name} created in ${community.name}!`);
       setTimeout(() => {
         navigate(`/community-page?id=${channelCommId}`);
       }, 1000);
-    } catch {
-      showToast('✅ Channel created!');
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 1000);
+    } catch (err) {
+      showToast(`⚠️ Could not reach the backend: ${err.message}`);
     }
   };
 
   return (
-    <div className="main">
+    <div className="app-shell">
+      <SideBar />
+      <div className="main">
       {/* Header */}
       <div className="header">
         <div className="header-title">Create New</div>
@@ -341,12 +423,12 @@ export default function CreateCommunity() {
                     <input
                       className="f-in"
                       value={name}
-                      maxLength={60}
+                      maxLength={50}
                       onChange={(e) => handleNameChange(e.target.value)}
                       placeholder="e.g. Pro Gamers, Indie Games…"
                     />
                     <div className="char-count">
-                      <span>{name.length}</span>/60
+                      <span>{name.length}</span>/50
                     </div>
                   </div>
 
@@ -357,12 +439,12 @@ export default function CreateCommunity() {
                     <textarea
                       className="f-ta"
                       value={desc}
-                      maxLength={300}
+                      maxLength={200}
                       onChange={(e) => setDesc(e.target.value)}
                       placeholder="What will people talk about here? What makes this community unique?"
                     ></textarea>
                     <div className="char-count">
-                      <span>{desc.length}</span>/300
+                      <span>{desc.length}</span>/200
                     </div>
                   </div>
 
@@ -372,6 +454,7 @@ export default function CreateCommunity() {
                       <input
                         className="f-in"
                         value={slug}
+                        maxLength={60}
                         onChange={(e) => setSlug(e.target.value)}
                         placeholder="pro-gamers"
                       />
@@ -738,8 +821,13 @@ export default function CreateCommunity() {
                   ← Back
                 </button>
               )}
-              <button className="btn-primary" onClick={nextStep}>
-                {currentStep === 4 ? 'Create Community' : 'Continue →'}
+              <button
+                className="btn-primary"
+                onClick={nextStep}
+                disabled={submitting}
+                style={submitting ? { opacity: 0.6, cursor: 'not-allowed' } : {}}
+              >
+                {currentStep === 4 ? (submitting ? 'Creating…' : 'Create Community') : 'Continue →'}
               </button>
             </div>
           </>
@@ -758,6 +846,7 @@ export default function CreateCommunity() {
           <span>{toastMsg}</span>
         </div>
       )}
+    </div>
     </div>
   );
 }

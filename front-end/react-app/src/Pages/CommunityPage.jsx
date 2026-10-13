@@ -8,37 +8,70 @@ const API_BASE = 'http://localhost:3000/api';
 function getUser() {
   try {
     const raw = JSON.parse(localStorage.getItem('nexus_user') || localStorage.getItem('currentUser') || '{}');
-    return { role: raw.role || 'user', username: raw.username || 'user', firstName: raw.firstName || 'User' };
+    return { id: raw.id, role: raw.role || 'user', username: raw.username || 'user', firstName: raw.firstName || 'User' };
   } catch { return { role: 'user', username: 'user', firstName: 'User' }; }
 }
 
+function getJoinedIdList() {
+  try {
+    const list = JSON.parse(localStorage.getItem('nexus_joined_communities') || '[]');
+    return Array.isArray(list) ? list.map(String) : [];
+  } catch { return []; }
+}
+
+function setJoinedIdList(idStr, joined) {
+  const current = getJoinedIdList();
+  const next = joined
+    ? [...new Set([...current, idStr])]
+    : current.filter(x => x !== idStr);
+  localStorage.setItem('nexus_joined_communities', JSON.stringify(next));
+}
+
+function getOwnedIdList() {
+  try {
+    const list = JSON.parse(localStorage.getItem('nexus_owned_community_ids') || '[]');
+    return Array.isArray(list) ? list.map(String) : [];
+  } catch { return []; }
+}
+
+async function apiErrorMessage(res) {
+  try {
+    const body = await res.json();
+    const msg = body?.message;
+    return Array.isArray(msg) ? msg.join(', ') : (msg || `HTTP ${res.status}`);
+  } catch { return `HTTP ${res.status}`; }
+}
+
+// Demo fallback used only to fill fields the API record doesn't carry.
 const DEFAULT_COMMUNITY = {
-  id: 1, name: 'Pro Gamers', icon: '⚡', members: 2451, online: 312,
-  category: 'Esports · Competitive', founded: 'Mar 2022',
-  description: 'Pro Gamers is a thriving community for developers of all levels — from curious beginners to seasoned engineers. We share projects, debug together, discuss the latest frameworks, and support each other in growing our careers.',
-  tags: ['MOBA', 'RPG', 'FPS', 'Streaming', 'Open Source', 'Career', 'Hackathons'],
-  channels: [
-    { id: 1, name: 'general', type: 'text', topic: 'Main hub' },
-    { id: 2, name: 'announcements', type: 'text', topic: 'Official announcements' },
-    { id: 3, name: 'dev-talk', type: 'text', topic: 'Technical discussions' },
-    { id: 4, name: 'off-topic', type: 'text', topic: 'Anything goes' },
-  ],
-  members_list: [
-    { id: 1, name: 'Rahul Kumar', role: 'owner', username: 'rahulkumar' },
-    { id: 2, name: 'Alex Morgan', role: 'moderator', username: 'alexmorgan' },
-    { id: 3, name: 'Maya Krishnan', role: 'member', username: 'mayak' },
-    { id: 4, name: 'Priya Sharma', role: 'member', username: 'priyas' },
-  ],
-  rules: [
-    'Be respectful and constructive in all discussions.',
-    'No spam, self-promotion, or off-topic content.',
-    'No hate speech, harassment, or discrimination.',
-    'Use code blocks for code snippets.',
-    'Keep discussions in the correct channels.',
-    'No sharing of proprietary or confidential content.',
-    'Follow platform Terms of Service at all times.',
-  ],
+  icon: '⚡', category: 'Esports · Competitive', founded: 'Mar 2022',
+  description: '',
+  tags: [],
+  channels: [],
+  rules: [],
 };
+
+// Generic defaults shown until the owner sets real rules via community
+// settings — same as the legacy page.
+const DEFAULT_RULES = [
+  'Treat every member with kindness and respect. Personal attacks, harassment, hate speech, and discriminatory language of any kind are strictly prohibited.',
+  "Keep discussions relevant to each channel's purpose. Use an off-topic channel for casual conversations.",
+  'Unsolicited advertisements, excessive self-promotion, and repetitive posting are not allowed.',
+  'When answering questions, be thorough and patient. Encourage learning at every level.',
+  'Always credit the original author when sharing code, articles, or other content.',
+  'Sharing pirated software, cracked licenses, or any illegal content is grounds for immediate permanent ban.',
+  'Moderator decisions are final. If you disagree with an action, use the appeal process rather than arguing in public channels.',
+];
+
+// The API returns memberCount/onlineCount.
+const memberCountOf = (c) => c?.memberCount ?? 0;
+const onlineCountOf = (c) => c?.onlineCount ?? 0;
+
+function initialsFromName(name = '') {
+  const parts = String(name).trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return 'U';
+  return (parts[0][0] + (parts[1]?.[0] || '')).toUpperCase();
+}
 
 export default function CommunityPage() {
   const navigate = useNavigate();
@@ -47,99 +80,238 @@ export default function CommunityPage() {
   const id = paramId || searchParams.get('id') || '1';
   const user = getUser();
 
-  const [community, setCommunity] = useState(DEFAULT_COMMUNITY);
-  const [activeTab, setActiveTab] = useState('overview');
-  const [joined, setJoined] = useState(true);
-  const [memberSearch, setMemberSearch] = useState('');
+  const [community, setCommunity] = useState(null);
+  const [loadError, setLoadError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('overview');
+  const [joined, setJoined] = useState(() => getJoinedIdList().includes(String(id)));
+  const [memberSearch, setMemberSearch] = useState('');
+  const [members, setMembers] = useState(null); // null = still loading
+  const [events, setEvents] = useState([]);
+  const [toastMsg, setToastMsg] = useState(null);
 
-  const canManage = user.role === 'admin' || user.role === 'community_manager';
-  const canDelete = user.role === 'admin';
+  const showToast = (msg) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg((cur) => (cur === msg ? null : cur)), 3000);
+  };
 
   useEffect(() => {
+    let cancelled = false;
     async function fetchCommunity() {
-      if (!id) { setLoading(false); return; }
+      setLoading(true);
       try {
-        const [commRes, memsRes] = await Promise.all([
-          fetch(`${API_BASE}/communities/${id}`, { headers: { 'x-role': user.role } }),
-          user.id ? fetch(`${API_BASE}/memberships?userId=${user.id}`, { headers: { 'x-role': user.role } }) : Promise.resolve(null),
-        ]);
+        const commRes = await fetch(`${API_BASE}/communities/${id}`, { headers: { 'x-role': user.role } });
+        if (cancelled) return;
         if (commRes.ok) {
           const data = await commRes.json();
           setCommunity({ ...DEFAULT_COMMUNITY, ...data });
+          setLoadError('');
+        } else {
+          setCommunity(null);
+          setLoadError(`Could not load community — ${await apiErrorMessage(commRes)}`);
         }
-        if (memsRes && memsRes.ok) {
-          const mems = await memsRes.json();
-          if (Array.isArray(mems)) {
-            setJoined(mems.some((m) => String(m.communityId) === String(id)));
-          }
-        }
-      } catch {}
-      setLoading(false);
-    }
-    fetchCommunity();
-  }, [id, user.role, user.id]);
-
-  const toggleJoin = async () => {
-    const next = !joined;
-    setJoined(next);
-    try {
-      if (next) {
-        await fetch(`${API_BASE}/memberships`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-role': user.role,
-          },
-          body: JSON.stringify({
-            userId: user.id || 4,
-            communityId: Number(community.id),
-          }),
-        });
-      } else {
-        const memsRes = await fetch(`${API_BASE}/memberships?userId=${user.id || 4}`, {
-          headers: { 'x-role': user.role },
-        });
-        if (memsRes.ok) {
-          const mems = await memsRes.json();
-          const target = mems.find((m) => String(m.communityId) === String(community.id));
-          if (target) {
-            await fetch(`${API_BASE}/memberships/${target.id}`, {
-              method: 'DELETE',
-              headers: { 'x-role': user.role },
-            });
-          }
+      } catch {
+        if (!cancelled) {
+          setCommunity(null);
+          setLoadError('Could not reach the backend (http://localhost:3000). Is the NestJS server running?');
         }
       }
+      if (!cancelled) setLoading(false);
+
+      // Join state: localStorage is the source of truth (same as legacy),
+      // reconciled with the server's membership list.
+      if (user.id) {
+        try {
+          const memsRes = await fetch(`${API_BASE}/memberships?userId=${user.id}`, { headers: { 'x-role': user.role } });
+          if (!cancelled && memsRes.ok) {
+            const mems = await memsRes.json();
+            if (Array.isArray(mems)) {
+              setJoined(mems.some((m) => String(m.communityId) === String(id)));
+            }
+          }
+        } catch { /* keep localStorage-derived state */ }
+      }
+    }
+    fetchCommunity();
+    return () => { cancelled = true; };
+  }, [id, user.role, user.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchPageData() {
+      if (!community?.id) return;
+      try {
+        const eventsRes = await fetch(`${API_BASE}/events`, { headers: { 'x-role': user.role } });
+        if (!cancelled && eventsRes.ok) {
+          const all = await eventsRes.json();
+          if (Array.isArray(all)) {
+            setEvents(all.filter((e) =>
+              String(e.communityId) === String(community.id) && e.status === 'approved'
+            ));
+          }
+        }
+      } catch { /* events section stays empty */ }
+
+      try {
+        const [memsRes, usersRes] = await Promise.all([
+          fetch(`${API_BASE}/memberships?communityId=${community.id}`, { headers: { 'x-role': user.role } }),
+          fetch(`${API_BASE}/users`, { headers: { 'x-role': user.role } }),
+        ]);
+        if (cancelled) return;
+        const mems = memsRes.ok ? await memsRes.json() : [];
+        const users = usersRes.ok ? await usersRes.json() : [];
+        const usersById = new Map((Array.isArray(users) ? users : []).map((u) => [String(u.id), u]));
+        setMembers((Array.isArray(mems) ? mems : []).map((m) => {
+          const u = usersById.get(String(m.userId));
+          const isOwner = u && String(u.id) === String(community.ownerId);
+          const isMod = !isOwner && (u?.role === 'moderator' || u?.role === 'community_manager');
+          return {
+            userId: m.userId,
+            name: u ? (u.username || u.email) : `User #${m.userId}`,
+            role: isOwner ? 'owner' : (isMod ? 'moderator' : 'member'),
+          };
+        }));
+      } catch {
+        if (!cancelled) setMembers([]);
+      }
+    }
+    fetchPageData();
+    return () => { cancelled = true; };
+  }, [community, user.role]);
+
+  const toggleJoin = async () => {
+    if (!community?.id) return;
+    if (!user.id) {
+      showToast('⚠️ Please log in to join communities.');
+      return;
+    }
+    const next = !joined;
+    setJoined(next);
+    setJoinedIdList(String(community.id), next);
+    try {
+      if (next) {
+        const res = await fetch(`${API_BASE}/memberships`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-role': user.role },
+          body: JSON.stringify({ userId: Number(user.id), communityId: Number(community.id) }),
+        });
+        if (!res.ok) {
+          const msg = await apiErrorMessage(res);
+          // Duplicate joins are harmless — the membership already exists.
+          if (!/already a member/i.test(msg)) throw new Error(msg);
+        }
+        showToast(`Welcome to ${community.name}! 🚀`);
+      } else {
+        const memsRes = await fetch(`${API_BASE}/memberships?userId=${user.id}`, { headers: { 'x-role': user.role } });
+        if (!memsRes.ok) throw new Error(await apiErrorMessage(memsRes));
+        const mems = await memsRes.json();
+        const target = Array.isArray(mems)
+          ? mems.find((m) => String(m.communityId) === String(community.id) && String(m.userId) === String(user.id))
+          : null;
+        if (target) {
+          const delRes = await fetch(`${API_BASE}/memberships/${target.id}`, {
+            method: 'DELETE',
+            headers: { 'x-role': user.role },
+          });
+          if (!delRes.ok) throw new Error(await apiErrorMessage(delRes));
+        }
+        showToast('Left community.');
+      }
     } catch (err) {
-      console.error('Membership toggle error:', err);
+      setJoined(!next);
+      setJoinedIdList(String(community.id), !next);
+      showToast(`⚠️ ${err.message}`);
     }
   };
 
   const handleDelete = async () => {
-    if (!window.confirm(`Delete community "${community.name}"? This cannot be undone.`)) return;
+    if (!community?.id) return;
+    if (!window.confirm(`Are you sure you want to permanently delete "${community.name}"? This action cannot be undone.`)) return;
     try {
-      await fetch(`${API_BASE}/communities/${community.id}`, {
+      const res = await fetch(`${API_BASE}/communities/${community.id}`, {
         method: 'DELETE',
         headers: { 'x-role': user.role },
       });
-      navigate('/discovery');
+      if (!res.ok) {
+        showToast(`⚠️ Could not delete community: ${await apiErrorMessage(res)}`);
+        return;
+      }
     } catch (err) {
-      console.error('Delete error:', err);
-      navigate('/discovery');
+      showToast(`⚠️ Could not reach the backend: ${err.message}`);
+      return;
     }
+    // Mirror the deletion locally so discovery/settings stop listing it.
+    const idStr = String(community.id);
+    localStorage.setItem('nexus_owned_community_ids', JSON.stringify(getOwnedIdList().filter((x) => x !== idStr)));
+    localStorage.setItem('nexus_joined_communities', JSON.stringify(getJoinedIdList().filter((x) => x !== idStr)));
+    showToast('🗑️ Community deleted.');
+    setTimeout(() => navigate('/discovery'), 600);
   };
 
-  const filteredMembers = community.members_list?.filter(m =>
-    !memberSearch || m.name.toLowerCase().includes(memberSearch.toLowerCase()) || m.username.toLowerCase().includes(memberSearch.toLowerCase())
-  ) || [];
+  // Owner gate: compare against the community record's ownerId from the server,
+  // or grant admin full access. localStorage is NOT used here — any user could
+  // tamper with nexus_owned_community_ids to gain owner UI.
+  const isOwner =
+    (user.id && String(community?.ownerId) === String(user.id)) ||
+    user.role === 'admin';
+
+  // Channels come from the record's channels, falling back to tags
+  // (same as the legacy page).
+  const rawChannels = community?.channels?.length ? community.channels : (community?.tags || []);
+  const channelEntries = rawChannels.map((item) =>
+    typeof item === 'object' ? item : { name: item, type: 'Text' }
+  );
+
+  const foundedLabel = community?.createdAt
+    ? new Date(community.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+    : community?.founded;
+
+  const rules = community?.rules?.length ? community.rules : DEFAULT_RULES;
+
+  const filteredMembers = (members || []).filter((m) =>
+    !memberSearch ||
+    m.name.toLowerCase().includes(memberSearch.toLowerCase()) ||
+    String(m.userId) === memberSearch.trim()
+  );
 
   const TABS = [
     { id: 'overview', label: '📋 Overview' },
-    { id: 'channels', label: `📡 Channels`, count: community.channels?.length || 0 },
-    { id: 'members', label: `👥 Members`, count: community.members },
-    { id: 'rules', label: `📜 Rules`, count: community.rules?.length || 0 },
+    { id: 'channels', label: '📡 Channels', count: channelEntries.length },
+    { id: 'members', label: '👥 Members', count: memberCountOf(community) },
+    { id: 'rules', label: '📜 Rules', count: rules.length },
   ];
+
+  if (loading && !community) {
+    return (
+      <div className="main">
+        <header className="header">
+          <button className="page-back-btn" onClick={() => navigate(-1)}>← Back</button>
+        </header>
+        <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-3,#888)' }}>Loading community…</div>
+      </div>
+    );
+  }
+
+  if (!community) {
+    return (
+      <div className="main">
+        <header className="header">
+          <button className="page-back-btn" onClick={() => navigate('/discovery')}>← Back</button>
+        </header>
+        <div style={{ padding: '60px', textAlign: 'center' }}>
+          <div style={{ fontSize: '40px', marginBottom: '12px' }}>🫥</div>
+          <div style={{ fontSize: '16px', fontWeight: 700, marginBottom: '8px' }}>Community not found</div>
+          <div style={{ fontSize: '13px', color: 'var(--text-3,#888)', marginBottom: '20px' }}>{loadError}</div>
+          <button
+            onClick={() => navigate('/discovery')}
+            style={{ background: '#6366f1', border: 'none', borderRadius: '8px', padding: '9px 18px', color: '#fff', fontWeight: 600, cursor: 'pointer' }}
+          >
+            Browse Communities
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="main">
@@ -168,20 +340,20 @@ export default function CommunityPage() {
       <div className="comm-banner-area">
         <div className="comm-banner">
           <div className="banner-pattern"></div>
-          <div className="banner-emoji" id="comm-icon">{community.icon}</div>
+          <div className="banner-emoji" id="comm-icon">{community.icon || '🏘️'}</div>
         </div>
         <div className="comm-profile-row">
-          <div className="comm-big-icon">{community.icon}</div>
+          <div className="comm-big-icon">{community.icon || '🏘️'}</div>
           <div className="comm-title-block">
             <div className="comm-title-row">
               <h1 className="comm-big-name" id="comm-name-title">{community.name}</h1>
               <div className="verified-badge">✓ Verified</div>
             </div>
             <div className="comm-meta-row">
-              <div className="meta-chip"><span className="online-dot"></span> <span id="comm-online-count">{community.online}</span> online</div>
-              <div className="meta-chip">👥 <span id="comm-member-count">{(community.members || 0).toLocaleString()}</span> members</div>
-              <div className="meta-chip" id="comm-category">💻 {community.category}</div>
-              <div className="meta-chip" id="comm-founded">📅 Founded {community.founded}</div>
+              <div className="meta-chip"><span className="online-dot"></span> <span id="comm-online-count">{onlineCountOf(community).toLocaleString()}</span> online</div>
+              <div className="meta-chip">👥 <span id="comm-member-count">{memberCountOf(community).toLocaleString()}</span> members</div>
+              <div className="meta-chip" id="comm-category">💻 {community.category || 'Gaming'} · Community</div>
+              {foundedLabel && <div className="meta-chip" id="comm-founded">📅 Founded {foundedLabel}</div>}
             </div>
           </div>
           <div className="comm-actions">
@@ -196,9 +368,9 @@ export default function CommunityPage() {
                 fontWeight: 600, cursor: 'pointer', fontSize: '14px',
               }}
             >
-              {joined ? '✓ Joined' : '+ Join'}
+              {joined ? '✓ Joined' : '+ Join Community'}
             </button>
-            {canManage && (
+            {isOwner && (
               <Link
                 to={`/community-settings/${community.id}`}
                 className="rbac-manage-btn"
@@ -213,7 +385,7 @@ export default function CommunityPage() {
                 ⚙️ Community Settings
               </Link>
             )}
-            {canDelete && (
+            {isOwner && (
               <button
                 id="rbacDeleteBtn"
                 onClick={handleDelete}
@@ -250,19 +422,21 @@ export default function CommunityPage() {
       {activeTab === 'overview' && (
         <div className="tab-content active" id="tab-overview">
           <div className="overview-left">
-            {/* Pinned Announcement */}
+            {/* Pinned Announcement — driven by community description */}
             <div className="pinned-card">
-              <div className="pin-header">📌 Pinned Announcement</div>
+              <div className="pin-header">📌 Welcome to {community.name}</div>
               <div className="pin-text">
-                Welcome to {community.name}! 🎉 Our monthly hackathon is back —
-                <strong> March Hack Sprint</strong> starts on March 7th. Register in #events before March 6th. Prizes worth $2,000 up for grabs. All skill levels welcome!
+                {community.description ||
+                  `Welcome to ${community.name}! Introduce yourself in #general and let us know what you're working on.`}
               </div>
-              <div className="pin-footer">
-                <div className="pin-author">
-                  <div className="pin-av user-avatar"></div>
-                  <span>Rahul Kumar (Owner) · 2 days ago</span>
+              {foundedLabel && (
+                <div className="pin-footer">
+                  <div className="pin-author">
+                    <div className="pin-av user-avatar"></div>
+                    <span>Community · Founded {foundedLabel}</span>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* About */}
@@ -272,7 +446,7 @@ export default function CommunityPage() {
               </div>
               <div className="about-text" id="comm-description">{community.description}</div>
               <div className="tag-row">
-                {community.tags?.map(tag => (
+                {(community.tags || []).map((tag) => (
                   <span key={tag} className="tag">{tag}</span>
                 ))}
               </div>
@@ -283,35 +457,35 @@ export default function CommunityPage() {
               <div className="sc-title"><span className="sc-title-icon">📊</span> Community Stats</div>
               <div className="stat-grid">
                 <div className="stat-box">
-                  <div className="stat-val" id="stat-total-members">{(community.members || 0).toLocaleString()}</div>
+                  <div className="stat-val" id="stat-total-members">{memberCountOf(community).toLocaleString()}</div>
                   <div className="stat-lbl">Total Members</div>
                 </div>
                 <div className="stat-box">
-                  <div className="stat-val stat-online" id="stat-online-now">{community.online}</div>
+                  <div className="stat-val stat-online" id="stat-online-now">{onlineCountOf(community).toLocaleString()}</div>
                   <div className="stat-lbl">Online Now</div>
                 </div>
                 <div className="stat-box">
-                  <div className="stat-val">{community.channels?.length || 14}</div>
+                  <div className="stat-val">{channelEntries.length}</div>
                   <div className="stat-lbl">Channels</div>
                 </div>
                 <div className="stat-box">
-                  <div className="stat-val">48k+</div>
+                  <div className="stat-val">—</div>
                   <div className="stat-lbl">Messages Sent</div>
                 </div>
               </div>
             </div>
 
-            {/* Recent Messages */}
+            {/* Recent Messages — static demo content, same as the legacy page */}
             <div className="section-card">
               <div className="sc-title"><span className="sc-title-icon">💬</span> Recent Messages</div>
               <div className="messages-feed">
                 {[
-                  { initials: 'AM', color: 'grad-violet', name: 'Alex Morgan', time: '10:41 AM', text: 'This looks incredible! Love the design direction. Are you using Gameunity\'s design system?', reactions: [] },
-                  { initials: 'MP', color: 'grad-pink', name: 'Maya Petrov', time: '10:44 AM', text: 'Sharing our team\'s early UI mockup for the hackathon 👀', reactions: [{ emoji: '🔥', count: 22 }, { emoji: '😍', count: 8 }] },
-                  { initials: 'RK', color: 'grad-purple', name: 'Rahul Kumar', time: '10:08 AM', role: 'Moderator', text: 'Check out the nexus-cli setup snippet in #dev-talk', reactions: [] },
+                  { initials: 'AM', name: 'Alex Morgan', time: '10:41 AM', text: 'This looks incredible! Love the design direction. Are you using Gameunity\'s design system?', reactions: [] },
+                  { initials: 'MP', name: 'Maya Petrov', time: '10:44 AM', text: 'Sharing our team\'s early UI mockup for the hackathon 👀', reactions: [{ emoji: '🔥', count: 22 }, { emoji: '😍', count: 8 }] },
+                  { initials: 'RK', name: 'Rahul Kumar', time: '10:08 AM', role: 'Moderator', text: 'Check out the nexus-cli setup snippet in #dev-talk', reactions: [] },
                 ].map((msg, i) => (
                   <div key={i} className="msg-group">
-                    <div className={`msg-av ${msg.color}`} style={{ fontWeight: 700, fontSize: '12px', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: msg.color === 'grad-violet' ? '#6366f1' : msg.color === 'grad-pink' ? '#ec4899' : '#8b5cf6', color: '#fff' }}>
+                    <div className="msg-av" style={{ fontWeight: 700, fontSize: '12px', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: i === 0 ? '#6366f1' : i === 1 ? '#ec4899' : '#8b5cf6', color: '#fff' }}>
                       {msg.initials}
                     </div>
                     <div className="msg-body">
@@ -328,11 +502,6 @@ export default function CommunityPage() {
                           ))}
                         </div>
                       )}
-                    </div>
-                    <div className="msg-actions">
-                      <button className="act-btn reaction-btn">😊</button>
-                      <button className="act-btn reply-btn">↩</button>
-                      <button className="act-btn more-btn">⋯</button>
                     </div>
                   </div>
                 ))}
@@ -353,16 +522,39 @@ export default function CommunityPage() {
             <div className="section-card">
               <div className="sc-title"><span className="sc-title-icon">📅</span> Active Events</div>
               <div id="activeEventsList">
-                <div style={{ padding: '12px', background: 'rgba(99,102,241,0.1)', borderRadius: '10px', marginBottom: '10px' }}>
-                  <div style={{ fontWeight: 600, fontSize: '14px' }}>🏆 Gaming Hackathon</div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-3,#666)', marginTop: '4px' }}>Mar 7 · 2:00 PM IST</div>
-                  <button
-                    style={{ marginTop: '8px', padding: '6px 14px', background: '#6366f1', border: 'none', borderRadius: '6px', color: '#fff', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}
-                    onClick={() => navigate('/events')}
-                  >
-                    View Event
-                  </button>
-                </div>
+                {events.length === 0 ? (
+                  <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-3,#888)', fontSize: '13px' }}>
+                    No active events yet
+                  </div>
+                ) : (
+                  events.map((ev) => {
+                    const date = new Date(ev.date);
+                    const day = Number.isNaN(date.getTime()) ? '—' : String(date.getDate()).padStart(2, '0');
+                    const month = Number.isNaN(date.getTime()) ? '' : date.toLocaleString('en-US', { month: 'short' });
+                    return (
+                      <div
+                        key={ev.id}
+                        className="event-mini"
+                        style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: 'rgba(99,102,241,0.08)', borderRadius: '10px', marginBottom: '10px', cursor: 'pointer' }}
+                        onClick={() => navigate('/events')}
+                      >
+                        <div style={{ textAlign: 'center', minWidth: '38px' }}>
+                          <div style={{ fontSize: '10.5px', fontWeight: 700, color: '#818cf8', textTransform: 'uppercase' }}>{month}</div>
+                          <div style={{ fontSize: '16px', fontWeight: 800, fontFamily: "'Syne', sans-serif" }}>{day}</div>
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: 600, fontSize: '13.5px' }}>{ev.title}</div>
+                          <div style={{ fontSize: '12px', color: 'var(--text-3,#666)', marginTop: '2px' }}>
+                            {ev.time || '—'} · {ev.attendees || 0} attending
+                          </div>
+                        </div>
+                        <span style={{ fontSize: '10.5px', fontWeight: 700, padding: '3px 8px', borderRadius: '20px', background: 'rgba(34,197,94,0.15)', color: '#22c55e', textTransform: 'capitalize' }}>
+                          {ev.status}
+                        </span>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
 
@@ -370,10 +562,12 @@ export default function CommunityPage() {
             <div className="section-card">
               <div className="sc-title"><span className="sc-title-icon">👤</span> Created By</div>
               <div className="created-by-card">
-                <div className="created-by-avatar" style={{ background: '#f59e0b', color: '#000', fontWeight: 700, width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>RK</div>
+                <div className="created-by-avatar" style={{ background: '#f59e0b', color: '#000', fontWeight: 700, width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  {initialsFromName(community.ownerName || community.createdBy || 'Owner')}
+                </div>
                 <div>
-                  <div className="created-by-name">Rahul Kumar</div>
-                  <div className="created-by-meta">Owner · Since {community.founded}</div>
+                  <div className="created-by-name">{community.ownerName || community.createdBy || 'Community Owner'}</div>
+                  <div className="created-by-meta">Owner{foundedLabel ? ` · Since ${foundedLabel}` : ''}</div>
                 </div>
               </div>
             </div>
@@ -386,26 +580,52 @@ export default function CommunityPage() {
         <div className="tab-content active" id="tab-channels">
           <div className="channels-layout">
             <div className="channels-main" id="channelsList">
-              {community.channels?.map(ch => (
-                <div
-                  key={ch.id}
-                  className="channel-row"
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px',
-                    background: 'var(--bg-card,#151d2f)', borderRadius: '10px', marginBottom: '8px',
-                    cursor: 'pointer', border: '1px solid var(--border,rgba(255,255,255,0.06))',
-                    transition: 'border-color 0.2s',
-                  }}
-                  onClick={() => navigate(`/chat?community=${community.id}&cname=${encodeURIComponent(community.name)}&channel=${encodeURIComponent(ch.name)}`)}
-                >
-                  <span style={{ fontSize: '18px', opacity: 0.7 }}>#</span>
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text-1,#fff)' }}>{ch.name}</div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-3,#666)', marginTop: '2px' }}>{ch.topic}</div>
-                  </div>
-                  <span style={{ marginLeft: 'auto', fontSize: '12px', color: 'var(--text-3,#555)' }}>→</span>
-                </div>
-              ))}
+              {channelEntries.length === 0 ? (
+                <div style={{ padding: '12px', fontSize: '12px', color: 'var(--text-3,#888)' }}>No channels yet.</div>
+              ) : (
+                channelEntries.map((ch, i) => {
+                  const chanName = ch.name || `channel-${i}`;
+                  const isVoice = ch.type === 'Voice';
+                  if (joined) {
+                    return (
+                      <div
+                        key={ch.id || chanName}
+                        className="channel-row"
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px',
+                          background: 'var(--bg-card,#151d2f)', borderRadius: '10px', marginBottom: '8px',
+                          cursor: 'pointer', border: '1px solid var(--border,rgba(255,255,255,0.06))',
+                          transition: 'border-color 0.2s',
+                        }}
+                        onClick={() => navigate(`/chat?community=${community.id}&cname=${encodeURIComponent(community.name)}&channel=${encodeURIComponent(chanName)}`)}
+                      >
+                        <span style={{ fontSize: '18px', opacity: 0.7 }}>{isVoice ? '🎙' : '#'}</span>
+                        <div>
+                          <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text-1,#fff)' }}>{chanName}</div>
+                          <div style={{ fontSize: '12px', color: 'var(--text-3,#666)', marginTop: '2px' }}>{ch.topic || (isVoice ? 'Voice channel' : 'Text channel')}</div>
+                        </div>
+                        <span style={{ marginLeft: 'auto', fontSize: '12px', color: 'var(--text-3,#555)' }}>→</span>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div
+                      key={ch.id || chanName}
+                      className="channel-row ch-locked"
+                      title="Join to access"
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px',
+                        background: 'var(--bg-card,#151d2f)', borderRadius: '10px', marginBottom: '8px',
+                        cursor: 'not-allowed', border: '1px solid var(--border,rgba(255,255,255,0.06))', opacity: 0.6,
+                      }}
+                      onClick={() => showToast('🔒 Join this community first to access channels!')}
+                    >
+                      <span style={{ fontSize: '16px' }}>🔒</span>
+                      <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text-1,#fff)' }}>{chanName}</div>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
         </div>
@@ -425,8 +645,12 @@ export default function CommunityPage() {
               />
             </div>
             <div className="members-groups" id="membersContainer">
-              {filteredMembers.length === 0 ? (
-                <div style={{ padding: '20px', color: 'var(--text-muted,#666)', fontSize: '13px' }}>No members found.</div>
+              {members === null ? (
+                <div style={{ padding: '20px', color: 'var(--text-muted,#666)', fontSize: '13px' }}>Loading members…</div>
+              ) : filteredMembers.length === 0 ? (
+                <div style={{ padding: '20px', color: 'var(--text-muted,#666)', fontSize: '13px' }}>
+                  {members.length ? 'No members match your search.' : 'No members yet.'}
+                </div>
               ) : (
                 ['owner', 'moderator', 'member'].map(roleGroup => {
                   const groupMembers = filteredMembers.filter(m => m.role === roleGroup);
@@ -437,17 +661,17 @@ export default function CommunityPage() {
                         {roleGroup === 'owner' ? '👑 Owner' : roleGroup === 'moderator' ? '🛡️ Moderators' : '👥 Members'} — {groupMembers.length}
                       </div>
                       {groupMembers.map(m => (
-                        <div key={m.id} className="member-row" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 0', borderBottom: '1px solid var(--border,rgba(255,255,255,0.04))' }}>
+                        <div key={`${roleGroup}-${m.userId}`} className="member-row" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 0', borderBottom: '1px solid var(--border,rgba(255,255,255,0.04))' }}>
                           <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: m.role === 'owner' ? '#f59e0b' : m.role === 'moderator' ? '#6366f1' : '#374151', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '12px', flexShrink: 0 }}>
-                            {m.name.split(' ').map(p => p[0]).join('').slice(0, 2)}
+                            {initialsFromName(m.name)}
                           </div>
                           <div>
                             <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text-1,#fff)' }}>{m.name}</div>
-                            <div style={{ fontSize: '12px', color: 'var(--text-3,#666)' }}>@{m.username}</div>
+                            <div style={{ fontSize: '12px', color: 'var(--text-3,#666)' }}>Member #{m.userId}</div>
                           </div>
                           <div style={{ marginLeft: 'auto' }}>
                             <button
-                              onClick={() => navigate(`/report?user=${m.id}&uname=${encodeURIComponent(m.name)}`)}
+                              onClick={() => navigate(`/report?user=${m.userId}&uname=${encodeURIComponent(m.name)}`)}
                               style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-3,#666)', borderRadius: '6px', padding: '5px 10px', fontSize: '12px', cursor: 'pointer' }}
                             >
                               🚩
@@ -469,7 +693,7 @@ export default function CommunityPage() {
         <div className="tab-content active" id="tab-rules">
           <div className="rules-layout">
             <div className="rules-main" id="rulesMain">
-              {community.rules?.map((rule, i) => (
+              {rules.map((rule, i) => (
                 <div key={i} className="rule-item" style={{ display: 'flex', gap: '16px', padding: '16px', background: 'var(--bg-card,#151d2f)', borderRadius: '10px', marginBottom: '10px', border: '1px solid var(--border,rgba(255,255,255,0.06))' }}>
                   <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(99,102,241,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '13px', color: '#818cf8', flexShrink: 0 }}>
                     {i + 1}
@@ -507,6 +731,17 @@ export default function CommunityPage() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {toastMsg && (
+        <div style={{
+          position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)',
+          background: '#1c2333', color: '#fff', border: '1px solid rgba(99,102,241,0.4)',
+          borderRadius: '10px', padding: '10px 18px', fontSize: '13.5px', zIndex: 2000,
+          boxShadow: '0 8px 30px rgba(0,0,0,0.45)', maxWidth: '80vw',
+        }}>
+          {toastMsg}
         </div>
       )}
     </div>

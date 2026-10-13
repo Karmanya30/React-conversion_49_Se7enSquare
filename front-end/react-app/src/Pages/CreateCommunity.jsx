@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import SideBar from '../Components/SideBar';
 import '../styles/global.css';
+import '../styles/sidebar.css';
 import '../styles/create-community.css';
 
 const API_BASE = 'http://localhost:3000/api';
@@ -45,6 +47,7 @@ export default function CreateCommunity() {
   const [activeTab, setActiveTab] = useState('community'); // 'community' | 'channel'
   const [currentStep, setCurrentStep] = useState(1);
   const [toastMsg, setToastMsg] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
   // Form State - Community
   const [name, setName] = useState('');
@@ -184,11 +187,13 @@ export default function CreateCommunity() {
   };
 
   const submitCreateCommunity = async () => {
+    if (submitting) return;
     const user = getCurrentUser();
     if (!user.id) {
       showToast('⚠️ You must be logged in to create a community.');
       return;
     }
+    setSubmitting(true);
     showToast('🚀 Creating community…');
     const channelNames = channels.map((c) => c.name);
     const tagList = tags.split(',').map((t) => t.trim()).filter(Boolean);
@@ -250,6 +255,8 @@ export default function CreateCommunity() {
       }, 1000);
     } catch (err) {
       showToast(`⚠️ Could not reach the backend: ${err.message}`);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -304,7 +311,9 @@ export default function CreateCommunity() {
   };
 
   return (
-    <div className="main">
+    <div className="app-shell">
+      <SideBar />
+      <div className="main">
       {/* Header */}
       <div className="header">
         <div className="header-title">Create New</div>
@@ -812,8 +821,13 @@ export default function CreateCommunity() {
                   ← Back
                 </button>
               )}
-              <button className="btn-primary" onClick={nextStep}>
-                {currentStep === 4 ? 'Create Community' : 'Continue →'}
+              <button
+                className="btn-primary"
+                onClick={nextStep}
+                disabled={submitting}
+                style={submitting ? { opacity: 0.6, cursor: 'not-allowed' } : {}}
+              >
+                {currentStep === 4 ? (submitting ? 'Creating…' : 'Create Community') : 'Continue →'}
               </button>
             </div>
           </>
@@ -832,6 +846,7 @@ export default function CreateCommunity() {
           <span>{toastMsg}</span>
         </div>
       )}
+    </div>
     </div>
   );
 }

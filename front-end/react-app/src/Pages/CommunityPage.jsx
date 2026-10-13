@@ -248,9 +248,10 @@ export default function CommunityPage() {
     setTimeout(() => navigate('/discovery'), 600);
   };
 
-  // Owner gate mirrors the legacy page: ownership tracked at creation time,
-  // matched against the record's ownerId, or an admin.
-  const isOwner = getOwnedIdList().includes(String(id)) ||
+  // Owner gate: compare against the community record's ownerId from the server,
+  // or grant admin full access. localStorage is NOT used here — any user could
+  // tamper with nexus_owned_community_ids to gain owner UI.
+  const isOwner =
     (user.id && String(community?.ownerId) === String(user.id)) ||
     user.role === 'admin';
 
@@ -421,19 +422,21 @@ export default function CommunityPage() {
       {activeTab === 'overview' && (
         <div className="tab-content active" id="tab-overview">
           <div className="overview-left">
-            {/* Pinned Announcement */}
+            {/* Pinned Announcement — driven by community description */}
             <div className="pinned-card">
-              <div className="pin-header">📌 Pinned Announcement</div>
+              <div className="pin-header">📌 Welcome to {community.name}</div>
               <div className="pin-text">
-                Welcome to {community.name}! 🎉 Our monthly hackathon is back —
-                <strong> March Hack Sprint</strong> starts on March 7th. Register in #events before March 6th. Prizes worth $2,000 up for grabs. All skill levels welcome!
+                {community.description ||
+                  `Welcome to ${community.name}! Introduce yourself in #general and let us know what you're working on.`}
               </div>
-              <div className="pin-footer">
-                <div className="pin-author">
-                  <div className="pin-av user-avatar"></div>
-                  <span>Rahul Kumar (Owner) · 2 days ago</span>
+              {foundedLabel && (
+                <div className="pin-footer">
+                  <div className="pin-author">
+                    <div className="pin-av user-avatar"></div>
+                    <span>Community · Founded {foundedLabel}</span>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* About */}
@@ -466,7 +469,7 @@ export default function CommunityPage() {
                   <div className="stat-lbl">Channels</div>
                 </div>
                 <div className="stat-box">
-                  <div className="stat-val">48k+</div>
+                  <div className="stat-val">—</div>
                   <div className="stat-lbl">Messages Sent</div>
                 </div>
               </div>

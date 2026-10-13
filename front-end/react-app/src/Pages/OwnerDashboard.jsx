@@ -83,14 +83,12 @@ export default function OwnerDashboard() {
           setStats((prev) => ({ ...prev, backendStatus: '⚠️ Degraded' }));
         }
       } catch {
-        setStats({
-          totalCommunities: 12,
-          totalEvents: 8,
-          pendingReportsCount: 3,
-          pendingEventsCount: 2,
-          pendingAppealsCount: 1,
-          backendStatus: 'Local Fallback',
-        });
+        // Backend unreachable — leave all counts at 0 so no fake numbers are
+        // presented as real data. The status indicator makes the outage visible.
+        setStats((prev) => ({
+          ...prev,
+          backendStatus: '⚠️ Unreachable',
+        }));
       }
 
       try {
@@ -111,16 +109,10 @@ export default function OwnerDashboard() {
           });
         }
       } catch {
-        setRevenue({
-          totalRevenue: 48500,
-          monthlyRevenue: 12400,
-          subscriptionRevenue: 32000,
-          organiserRevenue: 9500,
-          featuredEventRevenue: 7000,
-          premiumUsers: 45,
-          verifiedOrganisers: 8,
-          pendingOrganiserApplications: 3,
-        });
+        // Revenue endpoint unreachable — leave all values at 0.
+        // Do NOT substitute hardcoded numbers: they would be indistinguishable
+        // from real data on the dashboard.
+        setStats((prev) => ({ ...prev, backendStatus: '⚠️ Unreachable' }));
       }
     }
 
@@ -317,7 +309,7 @@ export default function OwnerDashboard() {
           if (res.ok) subData = await res.json();
           else loadError = await apiErrorMessage(res);
         } catch {
-          // fallback
+          loadError = 'Could not reach the backend.';
         }
         const subscribers = Array.isArray(subData.subscribers) ? subData.subscribers : [];
         setDrillContent(

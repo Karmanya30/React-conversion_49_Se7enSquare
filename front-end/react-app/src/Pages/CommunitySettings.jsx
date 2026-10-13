@@ -5,6 +5,25 @@ import '../styles/community-settings.css';
 
 const API_BASE = 'http://localhost:3000/api';
 
+const DEFAULT_COMMUNITY = {
+  name: 'Pro Gamers',
+  description: 'Competitive esports community and tournaments.',
+  banner: '',
+  rules: "Be respectful to other members\nStay on topic in each channel\nNo spam or self-promotion",
+  members: [
+    { id: 1, name: 'Sanidhya Joshi', handle: '@sanidhya', role: 'Owner', initials: 'SJ' },
+    { id: 2, name: 'Awadhesh', handle: '@awadhesh', role: 'Moderator', initials: 'AW' },
+    { id: 3, name: 'Karmanya', handle: '@karmanya', role: 'Member', initials: 'KM' },
+  ],
+  channels: [
+    { id: 1, name: 'announcements', type: 'Announcement' },
+    { id: 2, name: 'general', type: 'Text' },
+    { id: 3, name: 'voice-lounge', type: 'Voice' },
+  ],
+  memberCount: 124,
+  onlineCount: 42,
+};
+
 function getRole() {
   try {
     const stored = localStorage.getItem('nexus_user') || localStorage.getItem('currentUser');
@@ -24,26 +43,10 @@ export default function CommunitySettings() {
   const [isDirty, setIsDirty] = useState(false);
   const [toastMsg, setToastMsg] = useState(null);
 
+
   // Form State
-  const [community, setCommunity] = useState({
-    id: communityId,
-    name: 'Pro Gamers',
-    description: 'Competitive esports community and tournaments.',
-    banner: '',
-    rules: "Be respectful to other members\nStay on topic in each channel\nNo spam or self-promotion",
-    members: [
-      { id: 1, name: 'Sanidhya Joshi', handle: '@sanidhya', role: 'Owner', initials: 'SJ' },
-      { id: 2, name: 'Awadhesh', handle: '@awadhesh', role: 'Moderator', initials: 'AW' },
-      { id: 3, name: 'Karmanya', handle: '@karmanya', role: 'Member', initials: 'KM' },
-    ],
-    channels: [
-      { id: 1, name: 'announcements', type: 'Announcement' },
-      { id: 2, name: 'general', type: 'Text' },
-      { id: 3, name: 'voice-lounge', type: 'Voice' },
-    ],
-    memberCount: 124,
-    onlineCount: 42,
-  });
+  const [community, setCommunity] = useState(DEFAULT_COMMUNITY);
+  const [initialCommunity, setInitialCommunity] = useState(DEFAULT_COMMUNITY);
 
   // Modal State
   const [modalOpen, setModalOpen] = useState(false);
@@ -63,16 +66,18 @@ export default function CommunitySettings() {
         });
         if (res.ok) {
           const data = await res.json();
-          setCommunity((prev) => ({
-            ...prev,
+          const loaded = {
+            ...DEFAULT_COMMUNITY,
             ...data,
-            rules: Array.isArray(data.rules) ? data.rules.join('\n') : (data.rules || prev.rules),
+            rules: Array.isArray(data.rules) ? data.rules.join('\n') : (data.rules || DEFAULT_COMMUNITY.rules),
             channels: Array.isArray(data.channels)
               ? data.channels.map((ch, idx) =>
                   typeof ch === 'string' ? { id: idx + 1, name: ch, type: 'Text' } : ch
                 )
-              : prev.channels,
-          }));
+              : DEFAULT_COMMUNITY.channels,
+          };
+          setCommunity(loaded);
+          setInitialCommunity(loaded);
         }
       } catch {
         // use fallback
@@ -168,16 +173,18 @@ export default function CommunitySettings() {
     } catch {
       showToast('✅ Community settings saved (locally)!');
     }
+    setInitialCommunity({ ...community });
     setIsDirty(false);
   };
 
   const discardSettings = () => {
+    setCommunity(initialCommunity);
     setIsDirty(false);
     showToast('Changes discarded.');
   };
 
   return (
-    <div className="page">
+    <div className="cs-page">
       {/* Topbar */}
       <header className="topbar">
         <div className="topbar-left">
@@ -284,13 +291,13 @@ export default function CommunitySettings() {
                         className="current-banner"
                         style={{
                           backgroundImage: community.banner ? `url(${community.banner})` : 'none',
+                          backgroundColor: community.banner ? 'transparent' : 'rgba(255,255,255,0.05)',
                           backgroundSize: 'cover',
                           backgroundPosition: 'center',
                           height: '100px',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          background: community.banner || 'rgba(255,255,255,0.05)',
                           borderRadius: '8px',
                           color: '#aaa',
                         }}
@@ -441,7 +448,7 @@ export default function CommunitySettings() {
                       rows="10"
                       value={community.rules}
                       onChange={(e) => handleFieldChange('rules', e.target.value)}
-                      placeholder="Be respectful to other members&#10;Stay on topic in each channel&#10;No spam or self-promotion"
+                      placeholder={"Be respectful to other members\nStay on topic in each channel\nNo spam or self-promotion"}
                     ></textarea>
                   </div>
                 </div>

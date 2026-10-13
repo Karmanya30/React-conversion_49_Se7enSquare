@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
-import Navbar from '../Components/Navbar';
-import Footer from '../Components/Footer';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import SideBar from '../Components/SideBar';
 import Button from '../Components/Button';
+import '../styles/global.css';
+import '../styles/sidebar.css';
 import '../styles/pricing.css';
 
 /**
@@ -17,13 +19,18 @@ function getCurrentUser() {
     return {
       id: raw.id || 1,
       role: raw.role || 'user',
+      firstName: raw.firstName || raw.username || 'User',
+      username: raw.username || 'user',
     };
   } catch {
-    return { id: 1, role: 'user' };
+    return { id: 1, role: 'user', firstName: 'User', username: 'user' };
   }
 }
 
 export default function Pricing() {
+  const navigate = useNavigate();
+  const user = getCurrentUser();
+
   const PLANS = [
     {
       id: 'free',
@@ -84,7 +91,6 @@ export default function Pricing() {
   };
 
   useEffect(() => {
-    const user = getCurrentUser();
     fetch(`${API_BASE}/subscriptions/status?userId=${user.id}`, {
       headers: { 'x-role': user.role },
     })
@@ -95,7 +101,7 @@ export default function Pricing() {
         }
       })
       .catch(() => {});
-  }, []);
+  }, [user.id, user.role]);
 
   const handlePlanChange = async (planId) => {
     const targetPlan = PLANS.find((p) => p.id === planId);
@@ -110,7 +116,6 @@ export default function Pricing() {
       if (!confirmed) return;
     }
 
-    const user = getCurrentUser();
     try {
       const res = await fetch(`${API_BASE}/subscriptions/upgrade`, {
         method: 'POST',
@@ -136,7 +141,6 @@ export default function Pricing() {
       showToast('ℹ️', 'You are already on the Free plan.');
       return;
     }
-    const user = getCurrentUser();
     try {
       await fetch(`${API_BASE}/subscriptions/cancel`, {
         method: 'POST',
@@ -151,155 +155,112 @@ export default function Pricing() {
     showToast('✅', 'Subscription cancelled — Reverted to the Free plan');
   };
 
-  return (
-    <div className="pricing-page-wrapper" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Reusable Navbar */}
-      <Navbar />
+  const avatarInitials = (user.firstName?.slice(0, 2) || user.username?.slice(0, 2) || 'GU').toUpperCase();
 
-      <main style={{ flex: 1, maxWidth: '1120px', margin: '0 auto', padding: '120px 24px 60px', width: '100%' }}>
-        {/* Header Title Bar */}
-        <header
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: '20px',
-            borderBottom: '1px solid var(--border, rgba(255,255,255,0.06))',
-            paddingBottom: '16px',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ fontSize: '24px' }}>💎</div>
-            <h1
-              style={{
-                fontFamily: "'Syne', sans-serif",
-                fontSize: '24px',
-                fontWeight: 800,
-                color: 'var(--text-1, #fff)',
-                margin: 0,
-              }}
+  return (
+    <div className="app-shell">
+      <SideBar />
+
+      <div className="main">
+        {/* Header matching pricing.html */}
+        <header className="header">
+          <div className="header-left">
+            <div className="header-icon">💎</div>
+            <h1 className="header-title">Pricing &amp; Subscription</h1>
+            <span className="header-badge">PLANS</span>
+          </div>
+          <div className="header-right">
+            <div
+              className="header-avatar user-avatar"
+              style={{ cursor: 'pointer' }}
+              onClick={() => navigate('/profile-settings')}
+              title="Profile Settings"
             >
-              Pricing &amp; Subscription
-            </h1>
-            <span
-              style={{
-                background: 'rgba(91,110,245,0.15)',
-                color: 'var(--ac3, #8B9CF8)',
-                fontSize: '11px',
-                fontWeight: 700,
-                padding: '3px 8px',
-                borderRadius: '6px',
-                fontFamily: "'DM Sans', sans-serif",
-              }}
-            >
-              PLANS
-            </span>
+              {avatarInitials}
+            </div>
           </div>
         </header>
 
-        {/* Pricing Subtitle Intro */}
-        <p className="pricing-intro">
-          Free gets you started. Plus and Ultra Pro unlock bigger communities, more moderators, and premium extras.
-          Upgrades are simulated for this build — no real payment is taken.
-        </p>
+        <div className="pricing-page active">
+          {/* Pricing Subtitle Intro */}
+          <p className="pricing-intro">
+            Free gets you started. Plus and Ultra Pro unlock bigger communities, more moderators, and premium extras.
+            Upgrades are simulated for this build — no real payment is taken.
+          </p>
 
-        {/* Dynamic Plan Grid */}
-        <div className="plan-grid" id="planGrid">
-          {PLANS.map((plan) => {
-            const isCurrent = plan.id === currentPlan;
-            const isDowngrade = PLAN_RANK[plan.id] < PLAN_RANK[currentPlan];
+          {/* Dynamic Plan Grid */}
+          <div className="plan-grid" id="planGrid">
+            {PLANS.map((plan) => {
+              const isCurrent = plan.id === currentPlan;
+              const isDowngrade = PLAN_RANK[plan.id] < PLAN_RANK[currentPlan];
 
-            return (
-              <div
-                key={plan.id}
-                className={`plan-card ${isCurrent ? 'current' : ''} ${plan.featured ? 'featured' : ''}`}
-              >
-                {isCurrent && <div className="plan-badge-current">CURRENT</div>}
+              return (
+                <div
+                  key={plan.id}
+                  className={`plan-card ${isCurrent ? 'current' : ''} ${plan.featured ? 'featured' : ''}`}
+                >
+                  {isCurrent && <div className="plan-badge-current">CURRENT</div>}
 
-                <div className="plan-name">{plan.name}</div>
+                  <div className="plan-name">{plan.name}</div>
 
-                <div className="plan-price">
-                  {plan.price === 0 ? (
-                    'Free'
+                  <div className="plan-price">
+                    {plan.price === 0 ? (
+                      'Free'
+                    ) : (
+                      <>
+                        ₹{plan.price}
+                        <span>/mo</span>
+                      </>
+                    )}
+                  </div>
+
+                  <ul className="plan-features">
+                    {plan.features.map((feat) => (
+                      <li key={`${plan.id}-${feat}`}>{feat}</li>
+                    ))}
+                  </ul>
+
+                  {isCurrent ? (
+                    <Button className="plan-cta current" disabled>
+                      Current Plan
+                    </Button>
+                  ) : isDowngrade ? (
+                    <Button className="plan-cta downgrade" onClick={() => handlePlanChange(plan.id)}>
+                      Downgrade
+                    </Button>
                   ) : (
-                    <>
-                      ₹{plan.price}
-                      <span>/mo</span>
-                    </>
+                    <Button className="plan-cta primary" onClick={() => handlePlanChange(plan.id)}>
+                      Upgrade to {plan.name}
+                    </Button>
                   )}
                 </div>
-
-                <ul className="plan-features">
-                  {plan.features.map((feat, idx) => (
-                    <li key={idx}>{feat}</li>
-                  ))}
-                </ul>
-
-                {isCurrent ? (
-                  <Button className="plan-cta current" disabled>
-                    Current Plan
-                  </Button>
-                ) : isDowngrade ? (
-                  <Button className="plan-cta downgrade" onClick={() => handlePlanChange(plan.id)}>
-                    Downgrade
-                  </Button>
-                ) : (
-                  <Button className="plan-cta primary" onClick={() => handlePlanChange(plan.id)}>
-                    Upgrade to {plan.name}
-                  </Button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Cancellation Card */}
-        <div
-          className="card"
-          style={{
-            maxWidth: '520px',
-            background: 'var(--bg-2, #111118)',
-            border: '1px solid var(--border, rgba(255,255,255,0.06))',
-            borderRadius: '16px',
-            padding: '24px',
-            marginTop: '32px',
-          }}
-        >
-          <div className="card-header" style={{ marginBottom: '8px' }}>
-            <h3 style={{ fontFamily: "'Syne', sans-serif", fontSize: '18px', margin: 0, color: 'var(--text-1, #fff)' }}>
-              Need to cancel?
-            </h3>
+              );
+            })}
           </div>
-          <p style={{ fontSize: '13px', color: 'var(--text-3, #888)', marginBottom: '16px' }}>
-            Cancelling reverts you to the Free plan immediately.
-          </p>
-          <Button
-            className="btn-ghost"
-            onClick={handleCancelSubscription}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '8px',
-              border: '1px solid rgba(255,255,255,0.1)',
-              background: 'transparent',
-              color: 'var(--text-2, #ccc)',
-              cursor: 'pointer',
-              fontFamily: "'DM Sans', sans-serif",
-            }}
-          >
-            Cancel current subscription
-          </Button>
+
+          {/* Cancellation Card */}
+          <div className="card pricing-cancel-card">
+            <div className="card-header">
+              <h3>Need to cancel?</h3>
+            </div>
+            <p className="pricing-cancel-desc">
+              Cancelling reverts you to the Free plan immediately.
+            </p>
+            <Button
+              className="btn-ghost pricing-cancel-btn"
+              onClick={handleCancelSubscription}
+            >
+              Cancel current subscription
+            </Button>
+          </div>
         </div>
-      </main>
 
-      {/* Reusable Footer */}
-      <Footer />
-
-      {/* Toast Notification */}
-      <div className={`toast ${toast.show ? 'show' : ''}`} id="toast">
-        <span id="toastIcon">{toast.icon}</span>
-        <span id="toastMsg">{toast.msg}</span>
+        {/* Toast Notification */}
+        <div className={`toast ${toast.show ? 'show' : ''}`} id="toast">
+          <span id="toastIcon">{toast.icon}</span>
+          <span id="toastMsg">{toast.msg}</span>
+        </div>
       </div>
     </div>
   );
 }
-

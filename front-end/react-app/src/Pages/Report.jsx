@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import SideBar from '../Components/SideBar';
 import '../styles/global.css';
@@ -25,6 +25,16 @@ const REASONS = [
 
 export default function Report() {
   const navigate = useNavigate();
+  const [currentUser] = useState(() => {
+    try {
+      const u = JSON.parse(localStorage.getItem('currentUser') || localStorage.getItem('nexus_user') || '{}');
+      return {
+        firstName: u.firstName || u.username || 'User',
+      };
+    } catch {
+      return { firstName: 'User' };
+    }
+  });
   const [searchParams] = useSearchParams();
   const user = getUser();
 
@@ -140,7 +150,14 @@ export default function Report() {
           </div>
           <div className="header-actions">
             <div className="icon-btn">🔔<div className="notif-dot"></div></div>
-            <div className="header-avatar user-avatar" style={{ cursor: 'pointer' }} onClick={() => navigate('/profile-settings')} />
+            <div
+              className="header-avatar user-avatar"
+              style={{ cursor: 'pointer' }}
+              title="Profile Settings"
+              onClick={() => navigate('/profile-settings')}
+            >
+              {currentUser.firstName.slice(0, 2).toUpperCase()}
+            </div>
           </div>
         </header>
 

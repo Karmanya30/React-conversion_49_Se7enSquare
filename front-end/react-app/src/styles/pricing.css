@@ -5,6 +5,12 @@
   max-width: 640px;
 }
 
+.pricing-page {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
 .plan-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -136,3 +142,43 @@
 }
 
 .plan-cta.downgrade:hover { background: rgba(255, 255, 255, 0.04); color: #fff; }
+
+.pricing-cancel-card {
+  max-width: 520px;
+  background: var(--bg-2, #111118);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.06));
+  border-radius: 16px;
+  padding: 24px;
+  margin-top: 32px;
+}
+
+.pricing-cancel-card .card-header h3 {
+  font-family: "Syne", sans-serif;
+  font-size: 18px;
+  margin: 0;
+  color: var(--text-1, #fff);
+}
+
+.pricing-cancel-desc {
+  font-size: 13px;
+  color: var(--text-3, #888);
+  margin-bottom: 16px;
+  font-family: "DM Sans", sans-serif;
+}
+
+.pricing-cancel-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  color: var(--text-2, #ccc);
+  cursor: pointer;
+  font-family: "DM Sans", sans-serif;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.pricing-cancel-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}

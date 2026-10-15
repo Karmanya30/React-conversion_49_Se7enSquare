@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import SideBar from '../Components/SideBar';
 import useCreateCommunity from '../Components/platform/hooks/useCreateCommunity';
-import { WIZARD_STEPS, BANNERS } from '../Components/platform/data/createCommunityOptions';
+import { WIZARD_STEPS } from '../Components/platform/data/createCommunityOptions';
 import CreateCommunityHeader from './CreateCommunity/components/CreateCommunityHeader';
 import BasicInfoFields from './CreateCommunity/components/BasicInfoFields';
 import BrandingPicker from './CreateCommunity/components/BrandingPicker';

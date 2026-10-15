@@ -1,5 +1,4 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Link } from 'react-router-dom';
 import { memberCountOf, onlineCountOf } from '../../../Components/platform/hooks/useCommunityPage';
 
@@ -8,7 +7,6 @@ import { memberCountOf, onlineCountOf } from '../../../Components/platform/hooks
  * (Join/Leave, Settings, Delete for owners).
  */
 export default function CommunityBanner({ community, joined, isOwner, foundedLabel, onToggleJoin, onDelete }) {
-  const navigate = useNavigate();
 
   return (
     <div className="comm-banner-area">

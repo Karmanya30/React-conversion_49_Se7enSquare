@@ -21,7 +21,6 @@ export default function CommunityPage() {
   const id = paramId || searchParams.get('id') || '1';
 
   const {
-    user,
     community, loading, loadError,
     activeTab, setActiveTab,
     joined, toggleJoin,

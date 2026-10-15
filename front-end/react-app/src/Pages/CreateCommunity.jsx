@@ -1,852 +1,222 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import SideBar from '../Components/SideBar';
+import useCreateCommunity from '../Components/platform/hooks/useCreateCommunity';
+import { WIZARD_STEPS, BANNERS } from '../Components/platform/data/createCommunityOptions';
+import CreateCommunityHeader from './CreateCommunity/components/CreateCommunityHeader';
+import BasicInfoFields from './CreateCommunity/components/BasicInfoFields';
+import BrandingPicker from './CreateCommunity/components/BrandingPicker';
+import PrivacyTypeSelector from './CreateCommunity/components/PrivacyTypeSelector';
+import CommunityRulesInput from './CreateCommunity/components/CommunityRulesInput';
+import CreateCommunityActions from './CreateCommunity/components/CreateCommunityActions';
 import '../styles/global.css';
 import '../styles/sidebar.css';
 import '../styles/create-community.css';
 
-const API_BASE = 'http://localhost:3000/api';
-
-// Same URL shape the legacy wizard validated against.
-const URL_PATTERN = /^(https?:\/\/)?([\w-]+(\.[\w-]+)+)([/\w-]*)*\/?$/i;
-
-const CATEGORIES = ['FPS', 'MOBA', 'RPG', 'Strategy', 'Sports', 'Indie', 'Speedrunning', 'Other'];
-const ICONS = ['⚡', '🚀', '🔥', '🌟', '💡', '🎯', '🏆', '🌐', '⚙'];
-const BANNERS = [
-  'linear-gradient(135deg, #1e1b4b, #4338ca)',
-  'linear-gradient(135deg, #064e3b, #059669)',
-  'linear-gradient(135deg, #701a75, #c026d3)',
-  'linear-gradient(135deg, #7c2d12, #ea580c)',
-  'linear-gradient(135deg, #0f172a, #334155)',
-  'linear-gradient(135deg, #134e4a, #0d9488)',
-  'linear-gradient(135deg, #831843, #db2777)',
-];
-
-function getCurrentUser() {
-  try {
-    const raw = JSON.parse(localStorage.getItem('nexus_user') || localStorage.getItem('currentUser') || '{}');
-    return { id: raw.id, username: raw.username, role: raw.role };
-  } catch {
-    return {};
-  }
-}
-
-// Extracts the human-readable error message a NestJS response carries
-// (validation failures arrive as arrays of strings).
-async function apiErrorMessage(res) {
-  try {
-    const body = await res.json();
-    const msg = body?.message;
-    return Array.isArray(msg) ? msg.join(', ') : (msg || `HTTP ${res.status}`);
-  } catch { return `HTTP ${res.status}`; }
-}
-
+/**
+ * CreateCommunity Page — thin orchestrator.
+ * All state, validation, submission guard, and channel CRUD lives in useCreateCommunity().
+ */
 export default function CreateCommunity() {
   const navigate = useNavigate();
-
-  const [activeTab, setActiveTab] = useState('community'); // 'community' | 'channel'
-  const [currentStep, setCurrentStep] = useState(1);
-  const [toastMsg, setToastMsg] = useState(null);
-  const [submitting, setSubmitting] = useState(false);
-
-  // Form State - Community
-  const [name, setName] = useState('');
-  const [desc, setDesc] = useState('');
-  const [slug, setSlug] = useState('');
-  const [category, setCategory] = useState('FPS');
-  const [icon, setIcon] = useState('⚡');
-  const [banner, setBanner] = useState(BANNERS[0]);
-  const [website, setWebsite] = useState('');
-  const [tags, setTags] = useState('');
-  const [channels, setChannels] = useState([
-    { id: 1, name: 'announcements', type: 'Read-only', icon: '📢', desc: 'Official updates' },
-    { id: 2, name: 'general', type: 'Text', icon: '💬', desc: 'General discussion' },
-    { id: 3, name: 'help', type: 'Text', icon: '🔧', desc: 'Ask questions' },
-    { id: 4, name: 'voice-lounge', type: 'Voice', icon: '🎙', desc: 'Casual voice chats' },
-  ]);
-  const [privacy, setPrivacy] = useState('public');
-  const [permissions, setPermissions] = useState({
-    invites: true,
-    approval: false,
-    autoMod: true,
-    memberEvents: true,
-  });
-  const [rules, setRules] = useState('');
-  const [welcomeMsg, setWelcomeMsg] = useState('');
-
-  // Add channel sub-form in Step 3
-  const [showAddCh, setShowAddCh] = useState(false);
-  const [newChName, setNewChName] = useState('');
-  const [newChDesc, setNewChDesc] = useState('');
-  const [newChType, setNewChType] = useState('Text');
-
-  // Form State - Standalone Channel Flow
-  const [allCommunities, setAllCommunities] = useState([]);
-  const [channelCommId, setChannelCommId] = useState('');
-  const [standaloneChName, setStandaloneChName] = useState('');
-  const [standaloneChTopic, setStandaloneChTopic] = useState('');
-  const [standaloneChType, setStandaloneChType] = useState('Text');
-
-  const showToast = (msg) => {
-    setToastMsg(msg);
-    setTimeout(() => setToastMsg(null), 3000);
-  };
-
-  useEffect(() => {
-    const role = getCurrentUser().role || 'user';
-    fetch(`${API_BASE}/communities`, { headers: { 'x-role': role } })
-      .then((r) => (r.ok ? r.json() : []))
-      .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
-          setAllCommunities(data);
-          setChannelCommId(String(data[0].id));
-        }
-      })
-      .catch(() => {});
-  }, []);
-
-  const handleNameChange = (val) => {
-    setName(val);
-    setSlug(val.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''));
-  };
-
-  const handleAddChannel = () => {
-    if (!newChName.trim()) {
-      showToast('⚠️ Channel name is required');
-      return;
-    }
-    const clean = newChName.trim().toLowerCase().replace(/\s+/g, '-');
-    const chIcon = newChType === 'Voice' ? '🎙' : newChType === 'Announcement' ? '📢' : '💬';
-    setChannels([
-      ...channels,
-      { id: Date.now(), name: clean, type: newChType, icon: chIcon, desc: newChDesc || 'Community channel' },
-    ]);
-    setNewChName('');
-    setNewChDesc('');
-    setShowAddCh(false);
-  };
-
-  const handleDeleteChannel = (id) => {
-    setChannels(channels.filter((c) => c.id !== id));
-  };
-
-  // Limits mirror the backend CreateCommunityDto so users never type a
-  // payload the server would reject.
-  const validateStep = (step) => {
-    if (step === 1) {
-      const n = name.trim();
-      if (n.length < 3) {
-        showToast('⚠️ Community name must be at least 3 characters');
-        return false;
-      }
-      if (n.length > 50) {
-        showToast('⚠️ Community name must be at most 50 characters');
-        return false;
-      }
-      const d = desc.trim();
-      if (d.length < 10) {
-        showToast('⚠️ Description must be at least 10 characters');
-        return false;
-      }
-      if (d.length > 200) {
-        showToast('⚠️ Description must be at most 200 characters');
-        return false;
-      }
-    }
-    if (step === 2) {
-      if (website.trim() && !URL_PATTERN.test(website.trim())) {
-        showToast('⚠️ Please enter a valid website URL');
-        return false;
-      }
-      const tagList = tags.split(',').map((t) => t.trim()).filter(Boolean);
-      if (tagList.length > 5) {
-        showToast('⚠️ Up to 5 tags are allowed');
-        return false;
-      }
-      if (tagList.some((t) => t.length < 2 || t.length > 20)) {
-        showToast('⚠️ Each tag must be 2–20 characters');
-        return false;
-      }
-    }
-    return true;
-  };
-
-  const nextStep = () => {
-    if (!validateStep(currentStep)) return;
-    if (currentStep < 4) {
-      setCurrentStep(currentStep + 1);
-    } else {
-      submitCreateCommunity();
-    }
-  };
-
-  const prevStep = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
-    }
-  };
-
-  const submitCreateCommunity = async () => {
-    if (submitting) return;
-    const user = getCurrentUser();
-    if (!user.id) {
-      showToast('⚠️ You must be logged in to create a community.');
-      return;
-    }
-    setSubmitting(true);
-    showToast('🚀 Creating community…');
-    const channelNames = channels.map((c) => c.name);
-    const tagList = tags.split(',').map((t) => t.trim()).filter(Boolean);
-
-    const payload = {
-      name: name.trim(),
-      description: desc.trim(),
-      ownerId: Number(user.id),
-      category,
-      icon,
-      banner,
-      slug: slug || 'community',
-      channels: channelNames.length ? channelNames : ['general'],
-      tags: tagList.length ? tagList : [category.toLowerCase()],
-      visibility: privacy,
-      memberCount: 1,
-      onlineCount: 1,
-      ...(rules.trim()
-        ? { rules: rules.trim().split('\n').map((r) => r.trim()).filter(Boolean) }
-        : {}),
-    };
-
-    try {
-      const res = await fetch(`${API_BASE}/communities`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-role': user.role || 'user',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        // Real HTTP rejection (validation error, free-plan community cap, …) —
-        // surface it instead of faking success.
-        showToast(`⚠️ Could not create community: ${await apiErrorMessage(res)}`);
-        return;
-      }
-
-      const created = await res.json();
-      if (!created || !created.id) {
-        showToast('⚠️ Unexpected response from the server.');
-        return;
-      }
-
-      // Add to local joined communities
-      const id = String(created.id);
-      let joined = JSON.parse(localStorage.getItem('nexus_joined_communities') || '[]');
-      if (!joined.includes(id)) joined.push(id);
-      localStorage.setItem('nexus_joined_communities', JSON.stringify(joined));
-
-      let owned = JSON.parse(localStorage.getItem('nexus_owned_community_ids') || '[]');
-      if (!owned.includes(id)) owned.push(id);
-      localStorage.setItem('nexus_owned_community_ids', JSON.stringify(owned));
-
-      showToast('🎉 Community created! Redirecting…');
-      setTimeout(() => {
-        navigate(`/community-page?id=${created.id}`);
-      }, 1000);
-    } catch (err) {
-      showToast(`⚠️ Could not reach the backend: ${err.message}`);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const submitCreateChannel = async () => {
-    if (!standaloneChName.trim()) {
-      showToast('⚠️ Channel name is required');
-      return;
-    }
-    if (!standaloneChTopic.trim()) {
-      showToast('⚠️ Channel topic is required');
-      return;
-    }
-    if (!channelCommId) {
-      showToast('⚠️ Select a community first');
-      return;
-    }
-    const user = getCurrentUser();
-    const role = user.role || 'user';
-    showToast('💬 Creating channel…');
-    try {
-      // Channels live on the community record — no dedicated /channels API.
-      const commRes = await fetch(`${API_BASE}/communities/${channelCommId}`, {
-        headers: { 'x-role': role },
-      });
-      if (!commRes.ok) {
-        showToast(`⚠️ Could not load community: ${await apiErrorMessage(commRes)}`);
-        return;
-      }
-      const community = await commRes.json();
-      const existing = Array.isArray(community.channels) ? community.channels : [];
-      const newChannel = {
-        id: String(Date.now()),
-        name: standaloneChName.trim().toLowerCase().replace(/\s+/g, '-'),
-        type: standaloneChType,
-      };
-      const patchRes = await fetch(`${API_BASE}/communities/${channelCommId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', 'x-role': role },
-        body: JSON.stringify({ channels: [...existing, newChannel] }),
-      });
-      if (!patchRes.ok) {
-        showToast(`⚠️ Could not create channel: ${await apiErrorMessage(patchRes)}`);
-        return;
-      }
-      showToast(`✅ #${newChannel.name} created in ${community.name}!`);
-      setTimeout(() => {
-        navigate(`/community-page?id=${channelCommId}`);
-      }, 1000);
-    } catch (err) {
-      showToast(`⚠️ Could not reach the backend: ${err.message}`);
-    }
-  };
+  const hook = useCreateCommunity(navigate);
 
   return (
     <div className="app-shell">
       <SideBar />
       <div className="main">
-      {/* Header */}
-      <div className="header">
-        <div className="header-title">Create New</div>
-        <div className="breadcrumb">
-          <span
-            className="bc-link"
-            onClick={() => navigate('/dashboard')}
-            style={{ cursor: 'pointer', textDecoration: 'none' }}
-          >
-            Home
-          </span>
-          <span className="bc-sep">›</span>
-          <span className="bc-cur">
-            {activeTab === 'community' ? 'Create Community' : 'Create Channel'}
-          </span>
-        </div>
-      </div>
+        <CreateCommunityHeader activeTab={hook.activeTab} currentStep={hook.currentStep} />
 
-      {/* Progress Bar */}
-      {activeTab === 'community' && (
-        <div className="progress-bar">
-          <div
-            className="progress-fill"
-            style={{ width: `${(currentStep / 4) * 100}%` }}
-          ></div>
-        </div>
-      )}
-
-      <div className="body">
-        {/* Steps Panel / Preview */}
-        <div className="steps-panel">
-          {activeTab === 'community' && (
-            <>
-              <div className="steps-title">Progress</div>
-              {[
-                { step: 1, title: 'Basic Info', sub: 'Name, category, description' },
-                { step: 2, title: 'Appearance', sub: 'Banner, avatar, colors' },
-                { step: 3, title: 'Channels', sub: 'Set up your channels' },
-                { step: 4, title: 'Settings & Rules', sub: 'Privacy, roles, guidelines' },
-              ].map((s) => (
-                <div
-                  key={s.step}
-                  className={`step ${currentStep === s.step ? 'on' : ''}`}
-                  onClick={() => {
-                    if (s.step < currentStep || validateStep(currentStep)) {
-                      setCurrentStep(s.step);
-                    }
-                  }}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <div className="step-num">{s.step}</div>
-                  <div className="step-info">
-                    <div className="step-lbl">{s.title}</div>
-                    <div className="step-sub">{s.sub}</div>
+        <div className="body">
+          {/* Steps Panel / Live Preview */}
+          <div className="steps-panel">
+            {hook.activeTab === 'community' && (
+              <>
+                <div className="steps-title">Progress</div>
+                {WIZARD_STEPS.map((s) => (
+                  <div
+                    key={s.step}
+                    className={`step ${hook.currentStep === s.step ? 'on' : ''}`}
+                    onClick={() => {
+                      if (s.step < hook.currentStep || hook.validateStep(hook.currentStep)) {
+                        hook.setCurrentStep(s.step);
+                      }
+                    }}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <div className="step-num">{s.step}</div>
+                    <div className="step-info">
+                      <div className="step-lbl">{s.title}</div>
+                      <div className="step-sub">{s.sub}</div>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </>
-          )}
+                ))}
+              </>
+            )}
 
-          {/* Live Preview */}
-          <div className="preview-card" style={{ marginTop: '24px' }}>
-            <div className="pc-label">Live Preview</div>
-            <div className="pc-banner" style={{ background: banner }}></div>
-            <div className="pc-av">{icon}</div>
-            <div className="pc-info">
-              <div className="pc-name">{name || 'Your Community'}</div>
-              <div className="pc-meta">{category} · 1 member</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Form Area */}
-        <div className="form-area">
-          {/* Subpage Tabs */}
-          <div className="subpage-tabs">
-            <div
-              className={`spt ${activeTab === 'community' ? 'on' : ''}`}
-              onClick={() => {
-                setActiveTab('community');
-                setCurrentStep(1);
-              }}
-            >
-              🏘 Community
-            </div>
-            <div
-              className={`spt ${activeTab === 'channel' ? 'on' : ''}`}
-              onClick={() => setActiveTab('channel')}
-            >
-              💬 Channel
+            {/* Live Preview */}
+            <div className="preview-card" style={{ marginTop: '24px' }}>
+              <div className="pc-label">Live Preview</div>
+              <div className="pc-banner" style={{ background: hook.banner }}></div>
+              <div className="pc-av">{hook.icon}</div>
+              <div className="pc-info">
+                <div className="pc-name">{hook.name || 'Your Community'}</div>
+                <div className="pc-meta">{hook.category} · 1 member</div>
+              </div>
             </div>
           </div>
 
-          {/* Community Flow */}
-          {activeTab === 'community' && (
-            <div className="fview on">
-              {/* Step 1: Basic Info */}
-              {currentStep === 1 && (
-                <div>
-                  <div className="section-title">Basic Information</div>
-                  <div className="section-sub">Tell people what your community is about.</div>
+          {/* Form Area */}
+          <div className="form-area">
+            {/* Tab switcher: Community / Channel */}
+            <div className="subpage-tabs">
+              <div
+                className={`spt ${hook.activeTab === 'community' ? 'on' : ''}`}
+                onClick={() => { hook.setActiveTab('community'); hook.setCurrentStep(1); }}
+              >
+                🏘 Community
+              </div>
+              <div
+                className={`spt ${hook.activeTab === 'channel' ? 'on' : ''}`}
+                onClick={() => hook.setActiveTab('channel')}
+              >
+                💬 Channel
+              </div>
+            </div>
 
-                  <div className="fg">
-                    <div className="f-label">
-                      Community Name <span className="f-req">*</span>
-                    </div>
-                    <input
-                      className="f-in"
-                      value={name}
-                      maxLength={50}
-                      onChange={(e) => handleNameChange(e.target.value)}
-                      placeholder="e.g. Pro Gamers, Indie Games…"
-                    />
-                    <div className="char-count">
-                      <span>{name.length}</span>/50
-                    </div>
-                  </div>
-
-                  <div className="fg">
-                    <div className="f-label">
-                      Description <span className="f-req">*</span>
-                    </div>
-                    <textarea
-                      className="f-ta"
-                      value={desc}
-                      maxLength={200}
-                      onChange={(e) => setDesc(e.target.value)}
-                      placeholder="What will people talk about here? What makes this community unique?"
-                    ></textarea>
-                    <div className="char-count">
-                      <span>{desc.length}</span>/200
-                    </div>
-                  </div>
-
-                  <div className="fg-row">
-                    <div>
-                      <div className="f-label">Community URL</div>
-                      <input
-                        className="f-in"
-                        value={slug}
-                        maxLength={60}
-                        onChange={(e) => setSlug(e.target.value)}
-                        placeholder="pro-gamers"
-                      />
-                      <div className="f-desc">
-                        gameunity.io/c/<span>{slug || 'your-community'}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="fg">
-                    <div className="f-label">
-                      Category <span className="f-req">*</span>
-                    </div>
-                    <div className="cat-grid">
-                      {CATEGORIES.map((cat) => (
-                        <div
-                          key={cat}
-                          className={`cat-item ${category === cat ? 'on' : ''}`}
-                          onClick={() => setCategory(cat)}
-                          style={{ cursor: 'pointer' }}
-                        >
-                          <div className="cat-lbl">{cat}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Step 2: Appearance */}
-              {currentStep === 2 && (
-                <div>
-                  <div className="section-title">Appearance</div>
-                  <div className="section-sub">Make your community visually recognisable.</div>
-
-                  <div className="fg">
-                    <div className="f-label">Community Icon</div>
-                    <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                      <div
-                        style={{
-                          fontSize: '36px',
-                          width: '64px',
-                          height: '64px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          background: 'rgba(255,255,255,0.05)',
-                          borderRadius: '16px',
-                        }}
-                      >
-                        {icon}
-                      </div>
-                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                        {ICONS.map((ico) => (
-                          <div
-                            key={ico}
-                            className={`cat-item ${icon === ico ? 'on' : ''}`}
-                            onClick={() => setIcon(ico)}
-                            style={{ cursor: 'pointer', padding: '10px 14px', fontSize: '20px' }}
-                          >
-                            {ico}
+            {/* Community Wizard Steps */}
+            {hook.activeTab === 'community' && (
+              <div className="fview on">
+                {hook.currentStep === 1 && (
+                  <BasicInfoFields
+                    name={hook.name} desc={hook.desc} slug={hook.slug} category={hook.category}
+                    onNameChange={hook.handleNameChange} onDescChange={hook.setDesc}
+                    onSlugChange={hook.setSlug} onCategoryChange={hook.setCategory}
+                  />
+                )}
+                {hook.currentStep === 2 && (
+                  <BrandingPicker
+                    icon={hook.icon} banner={hook.banner} tags={hook.tags} website={hook.website}
+                    onIconChange={hook.setIcon} onBannerChange={hook.setBanner}
+                    onTagsChange={hook.setTags} onWebsiteChange={hook.setWebsite}
+                  />
+                )}
+                {hook.currentStep === 3 && (
+                  <div>
+                    <div className="section-title">Channels</div>
+                    <div className="section-sub">Set up the channels your members will use to communicate.</div>
+                    <div className="ch-list">
+                      {hook.channels.map((ch) => (
+                        <div key={ch.id} className="ch-item">
+                          <div className="ch-ico">{ch.icon || '💬'}</div>
+                          <div className="ch-info">
+                            <div className="ch-name">#{ch.name}</div>
+                            <div className="ch-desc">{ch.desc}</div>
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="fg">
-                    <div className="f-label">Banner Style</div>
-                    <div className="banner-picker" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                      {BANNERS.map((b, i) => (
-                        <div
-                          key={i}
-                          className={`bp-item ${banner === b ? 'on' : ''}`}
-                          onClick={() => setBanner(b)}
-                          style={{
-                            background: b,
-                            width: '80px',
-                            height: '40px',
-                            borderRadius: '8px',
-                            cursor: 'pointer',
-                            border: banner === b ? '2px solid #fff' : '2px solid transparent',
-                          }}
-                        ></div>
+                          <span className="ch-type">{ch.type}</span>
+                          <span className="ch-del" onClick={() => hook.handleDeleteChannel(ch.id)} style={{ cursor: 'pointer' }}>✕</span>
+                        </div>
                       ))}
                     </div>
-                  </div>
-
-                  <div className="fg-row">
-                    <div>
-                      <div className="f-label">Community Tags</div>
-                      <input
-                        className="f-in"
-                        value={tags}
-                        onChange={(e) => setTags(e.target.value)}
-                        placeholder="e.g. FPS, streaming, competitive"
-                      />
-                    </div>
-                    <div>
-                      <div className="f-label">Website (optional)</div>
-                      <input
-                        className="f-in"
-                        value={website}
-                        onChange={(e) => setWebsite(e.target.value)}
-                        placeholder="https://yoursite.com"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Step 3: Channels */}
-              {currentStep === 3 && (
-                <div>
-                  <div className="section-title">Channels</div>
-                  <div className="section-sub">Set up the channels your members will use to communicate.</div>
-
-                  <div className="ch-list">
-                    {channels.map((ch) => (
-                      <div key={ch.id} className="ch-item">
-                        <div className="ch-ico">{ch.icon || '💬'}</div>
-                        <div className="ch-info">
-                          <div className="ch-name">#{ch.name}</div>
-                          <div className="ch-desc">{ch.desc}</div>
+                    {hook.showAddCh ? (
+                      <div className="ch-form" style={{ marginTop: '16px' }}>
+                        <div className="f-label">New Channel</div>
+                        <div className="ch-type-picker" style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                          {['Text', 'Voice', 'Announcement', 'Forum'].map((t) => (
+                            <button key={t} type="button" className={`ctp ${hook.newChType === t ? 'on' : ''}`} onClick={() => hook.setNewChType(t)}>{t}</button>
+                          ))}
                         </div>
-                        <span className="ch-type">{ch.type}</span>
-                        <span
-                          className="ch-del"
-                          onClick={() => handleDeleteChannel(ch.id)}
-                          style={{ cursor: 'pointer' }}
-                        >
-                          ✕
-                        </span>
+                        <div className="ch-form-row">
+                          <div>
+                            <div className="f-label">Channel Name *</div>
+                            <input className="f-in" value={hook.newChName} onChange={(e) => hook.setNewChName(e.target.value)} placeholder="e.g. clips-and-highlights" />
+                          </div>
+                          <div>
+                            <div className="f-label">Description</div>
+                            <input className="f-in" value={hook.newChDesc} onChange={(e) => hook.setNewChDesc(e.target.value)} placeholder="What is this channel for?" />
+                          </div>
+                        </div>
+                        <div className="ch-form-acts" style={{ marginTop: '12px', display: 'flex', gap: '8px' }}>
+                          <button className="btn-sm btn-sm-g" onClick={() => hook.setShowAddCh(false)}>Cancel</button>
+                          <button className="btn-sm btn-sm-p" onClick={hook.handleAddChannel}>Add Channel</button>
+                        </div>
                       </div>
+                    ) : (
+                      <div className="add-ch-btn" onClick={() => hook.setShowAddCh(true)} style={{ cursor: 'pointer', marginTop: '12px' }}>
+                        <span>+</span> Add another channel
+                      </div>
+                    )}
+                  </div>
+                )}
+                {hook.currentStep === 4 && (
+                  <div>
+                    <div className="section-title">Settings &amp; Rules</div>
+                    <div className="section-sub">Configure privacy, roles, and community guidelines.</div>
+                    <PrivacyTypeSelector
+                      privacy={hook.privacy} permissions={hook.permissions}
+                      onPrivacyChange={hook.setPrivacy}
+                      onPermissionToggle={(key) => hook.setPermissions({ ...hook.permissions, [key]: !hook.permissions[key] })}
+                    />
+                    <CommunityRulesInput
+                      rules={hook.rules} welcomeMsg={hook.welcomeMsg}
+                      onRulesChange={hook.setRules} onWelcomeMsgChange={hook.setWelcomeMsg}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Standalone Channel Flow */}
+            {hook.activeTab === 'channel' && (
+              <div className="fview on">
+                <div className="section-title">Create a Channel</div>
+                <div className="section-sub">Add a new channel to an existing community.</div>
+                <div className="fg">
+                  <label className="f-label">Community</label>
+                  <select className="f-sel" value={hook.channelCommId} onChange={(e) => hook.setChannelCommId(e.target.value)}>
+                    {hook.allCommunities.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="fg">
+                  <div className="f-label">Channel Type</div>
+                  <div className="ch-type-picker" style={{ display: 'flex', gap: '8px' }}>
+                    {['Text', 'Voice', 'Announcement', 'Forum', 'Events'].map((t) => (
+                      <button key={t} type="button" className={`ctp ${hook.standaloneChType === t ? 'on' : ''}`} onClick={() => hook.setStandaloneChType(t)}>{t}</button>
                     ))}
                   </div>
-
-                  {showAddCh ? (
-                    <div className="ch-form" style={{ marginTop: '16px' }}>
-                      <div className="f-label">New Channel</div>
-                      <div className="ch-type-picker" style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-                        {['Text', 'Voice', 'Announcement', 'Forum'].map((t) => (
-                          <button
-                            key={t}
-                            type="button"
-                            className={`ctp ${newChType === t ? 'on' : ''}`}
-                            onClick={() => setNewChType(t)}
-                          >
-                            {t}
-                          </button>
-                        ))}
-                      </div>
-                      <div className="ch-form-row">
-                        <div>
-                          <div className="f-label">Channel Name *</div>
-                          <input
-                            className="f-in"
-                            value={newChName}
-                            onChange={(e) => setNewChName(e.target.value)}
-                            placeholder="e.g. clips-and-highlights"
-                          />
-                        </div>
-                        <div>
-                          <div className="f-label">Description</div>
-                          <input
-                            className="f-in"
-                            value={newChDesc}
-                            onChange={(e) => setNewChDesc(e.target.value)}
-                            placeholder="What is this channel for?"
-                          />
-                        </div>
-                      </div>
-                      <div className="ch-form-acts" style={{ marginTop: '12px', display: 'flex', gap: '8px' }}>
-                        <button className="btn-sm btn-sm-g" onClick={() => setShowAddCh(false)}>
-                          Cancel
-                        </button>
-                        <button className="btn-sm btn-sm-p" onClick={handleAddChannel}>
-                          Add Channel
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div
-                      className="add-ch-btn"
-                      onClick={() => setShowAddCh(true)}
-                      style={{ cursor: 'pointer', marginTop: '12px' }}
-                    >
-                      <span>+</span> Add another channel
-                    </div>
-                  )}
                 </div>
-              )}
-
-              {/* Step 4: Settings & Rules */}
-              {currentStep === 4 && (
-                <div>
-                  <div className="section-title">Settings &amp; Rules</div>
-                  <div className="section-sub">Configure privacy, roles, and community guidelines.</div>
-
-                  <div className="fg">
-                    <div className="f-label">Privacy</div>
-                    <div className="role-grid">
-                      <div
-                        className={`role-card ${privacy === 'public' ? 'on' : ''}`}
-                        onClick={() => setPrivacy('public')}
-                        style={{ cursor: 'pointer' }}
-                      >
-                        <div className="rc-top">
-                          <span className="rc-ico">🌍</span>
-                          {privacy === 'public' && <span className="rc-badge">Selected</span>}
-                        </div>
-                        <div className="rc-name">Public</div>
-                        <div className="rc-desc">Anyone can find and join. Content is visible to all.</div>
-                      </div>
-                      <div
-                        className={`role-card ${privacy === 'private' ? 'on' : ''}`}
-                        onClick={() => setPrivacy('private')}
-                        style={{ cursor: 'pointer' }}
-                      >
-                        <div className="rc-top">
-                          <span className="rc-ico">🔒</span>
-                          {privacy === 'private' && <span className="rc-badge">Selected</span>}
-                        </div>
-                        <div className="rc-name">Private</div>
-                        <div className="rc-desc">Invite-only. Content hidden from non-members.</div>
-                      </div>
-                    </div>
+                <div className="fg-row">
+                  <div>
+                    <div className="f-label">Channel Name <span className="f-req">*</span></div>
+                    <input className="f-in" value={hook.standaloneChName} onChange={(e) => hook.setStandaloneChName(e.target.value)} placeholder="e.g. resources" />
                   </div>
-
-                  <div className="fg">
-                    <div className="f-label">Member Permissions</div>
-                    <div>
-                      <div className="toggle-row">
-                        <div className="tr-l">
-                          <div className="tr-lbl">Allow invites from members</div>
-                          <div className="tr-desc">Any member can invite others to join</div>
-                        </div>
-                        <div
-                          className={`toggle ${permissions.invites ? 'on' : ''}`}
-                          onClick={() => setPermissions({ ...permissions, invites: !permissions.invites })}
-                        ></div>
-                      </div>
-                      <div className="toggle-row">
-                        <div className="tr-l">
-                          <div className="tr-lbl">Require approval to join</div>
-                          <div className="tr-desc">New members need admin approval</div>
-                        </div>
-                        <div
-                          className={`toggle ${permissions.approval ? 'on' : ''}`}
-                          onClick={() => setPermissions({ ...permissions, approval: !permissions.approval })}
-                        ></div>
-                      </div>
-                      <div className="toggle-row">
-                        <div className="tr-l">
-                          <div className="tr-lbl">Enable AutoMod</div>
-                          <div className="tr-desc">AI moderates harmful content automatically</div>
-                        </div>
-                        <div
-                          className={`toggle ${permissions.autoMod ? 'on' : ''}`}
-                          onClick={() => setPermissions({ ...permissions, autoMod: !permissions.autoMod })}
-                        ></div>
-                      </div>
-                    </div>
+                  <div>
+                    <div className="f-label">Topic</div>
+                    <input className="f-in" value={hook.standaloneChTopic} onChange={(e) => hook.setStandaloneChTopic(e.target.value)} placeholder="What's this channel about?" />
                   </div>
-
-                  <div className="fg">
-                    <div className="f-label">Community Rules</div>
-                    <textarea
-                      className="f-ta"
-                      value={rules}
-                      onChange={(e) => setRules(e.target.value)}
-                      placeholder="1. Be respectful to all members&#10;2. No spam or self-promotion&#10;3. Stay on topic&#10;4. No hate speech or harassment"
-                      rows={5}
-                    ></textarea>
-                  </div>
-
-                  <div className="fg">
-                    <div className="f-label">Welcome Message</div>
-                    <textarea
-                      className="f-ta"
-                      value={welcomeMsg}
-                      onChange={(e) => setWelcomeMsg(e.target.value)}
-                      placeholder="Welcome to the community! Introduce yourself in #general and let us know what you're working on…"
-                      rows={3}
-                    ></textarea>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Standalone Channel Flow */}
-          {activeTab === 'channel' && (
-            <div className="fview on">
-              <div className="section-title">Create a Channel</div>
-              <div className="section-sub">Add a new channel to an existing community.</div>
-
-              <div className="fg">
-                <label className="f-label">Community</label>
-                <select
-                  className="f-sel"
-                  value={channelCommId}
-                  onChange={(e) => setChannelCommId(e.target.value)}
-                >
-                  {allCommunities.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="fg">
-                <div className="f-label">Channel Type</div>
-                <div className="ch-type-picker" style={{ display: 'flex', gap: '8px' }}>
-                  {['Text', 'Voice', 'Announcement', 'Forum', 'Events'].map((t) => (
-                    <button
-                      key={t}
-                      type="button"
-                      className={`ctp ${standaloneChType === t ? 'on' : ''}`}
-                      onClick={() => setStandaloneChType(t)}
-                    >
-                      {t}
-                    </button>
-                  ))}
                 </div>
               </div>
-
-              <div className="fg-row">
-                <div>
-                  <div className="f-label">
-                    Channel Name <span className="f-req">*</span>
-                  </div>
-                  <input
-                    className="f-in"
-                    value={standaloneChName}
-                    onChange={(e) => setStandaloneChName(e.target.value)}
-                    placeholder="e.g. resources"
-                  />
-                </div>
-                <div>
-                  <div className="f-label">Topic</div>
-                  <input
-                    className="f-in"
-                    value={standaloneChTopic}
-                    onChange={(e) => setStandaloneChTopic(e.target.value)}
-                    placeholder="What's this channel about?"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* Bottom Bar */}
-      <div className="bottom-bar">
-        {activeTab === 'community' ? (
-          <>
-            <div className="bb-step">Step {currentStep} of 4</div>
-            <div className="bb-acts">
-              {currentStep > 1 && (
-                <button className="btn-ghost" onClick={prevStep}>
-                  ← Back
-                </button>
-              )}
-              <button
-                className="btn-primary"
-                onClick={nextStep}
-                disabled={submitting}
-                style={submitting ? { opacity: 0.6, cursor: 'not-allowed' } : {}}
-              >
-                {currentStep === 4 ? (submitting ? 'Creating…' : 'Create Community') : 'Continue →'}
-              </button>
-            </div>
-          </>
-        ) : (
-          <div className="bb-acts" style={{ marginLeft: 'auto' }}>
-            <button className="btn-primary" onClick={submitCreateChannel}>
-              Create Channel
-            </button>
+        <CreateCommunityActions
+          activeTab={hook.activeTab}
+          currentStep={hook.currentStep}
+          submitting={hook.submitting}
+          onPrev={hook.prevStep}
+          onNext={hook.nextStep}
+          onCreateChannel={hook.submitCreateChannel}
+        />
+
+        {hook.toastMsg && (
+          <div className="toast show" style={{ display: 'flex' }}>
+            <span>{hook.toastMsg}</span>
           </div>
         )}
       </div>
-
-      {/* Toast */}
-      {toastMsg && (
-        <div className="toast show" style={{ display: 'flex' }}>
-          <span>{toastMsg}</span>
-        </div>
-      )}
-    </div>
     </div>
   );
 }

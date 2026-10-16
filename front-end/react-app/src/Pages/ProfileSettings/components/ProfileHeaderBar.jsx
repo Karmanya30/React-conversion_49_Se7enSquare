@@ -1,18 +1,20 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
+import { getHomeRoute } from '../../../services/roleAccess';
 
 /**
  * Top bar — brand, page label, Discard / Save buttons, avatar thumbnail, Logout.
  */
 export default function ProfileHeaderBar({
   formData, isDirty, canDiscard, initials, saving,
-  onDiscard, onSave, onLogout,
+  onDiscard, onSave, onLogout, userRole
 }) {
   return (
     <div className="top-bar">
-      <div className="tb-logo">
+      <Link to={getHomeRoute(userRole)} className="tb-logo" style={{ textDecoration: 'none', color: 'inherit', cursor: 'pointer' }}>
         <div className="tb-logo-icon">⬡</div>
         <span className="tb-logo-name">Gameunity</span>
-      </div>
+      </Link>
       <div className="tb-sep"></div>
       <div className="tb-page">⚙️ Profile &amp; Settings</div>
       <div className="tb-right">

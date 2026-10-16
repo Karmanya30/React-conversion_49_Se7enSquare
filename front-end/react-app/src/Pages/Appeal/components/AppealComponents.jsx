@@ -1,5 +1,7 @@
 import React from 'react';
 import { NEXT_STEPS } from '../../../Components/platform/data/appealData';
+import { authService } from '../../../services/authService';
+import { getHomeRoute } from '../../../services/roleAccess';
 
 /**
  * Appeal page header — back button and breadcrumb.
@@ -219,7 +221,7 @@ export function AppealSuccess({ refId, navigate, onReset }) {
             Reference ID: <span style={{ fontFamily: 'monospace', color: '#818cf8' }}>{refId}</span>
           </div>
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-            <button onClick={() => navigate('/dashboard')} style={{ padding: '10px 20px', background: '#6366f1', border: 'none', borderRadius: '8px', color: '#fff', fontWeight: 600, cursor: 'pointer', fontSize: '14px' }}>Return to Dashboard</button>
+            <button onClick={() => navigate(getHomeRoute(authService.getCurrentUser()?.role))} style={{ padding: '10px 20px', background: '#6366f1', border: 'none', borderRadius: '8px', color: '#fff', fontWeight: 600, cursor: 'pointer', fontSize: '14px' }}>Return to Home</button>
             <button onClick={onReset} style={{ padding: '10px 20px', background: 'transparent', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', color: '#aaa', cursor: 'pointer', fontSize: '14px' }}>Submit Another Appeal</button>
           </div>
         </div>

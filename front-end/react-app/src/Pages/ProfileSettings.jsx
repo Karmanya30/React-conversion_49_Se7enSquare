@@ -14,7 +14,7 @@ import DangerZoneTab from './ProfileSettings/components/DangerZoneTab';
 export default function ProfileSettings() {
   const p = useProfileSettings();
   return <div className="app-shell"><SideBar /><div className="main-column-wrapper">
-    <ProfileHeaderBar formData={p.formData} isDirty={p.isDirty} canDiscard={p.canDiscard} saving={p.saving || p.loading} initials={p.initials} onDiscard={p.discardChanges} onSave={p.saveAllChanges} onLogout={p.handleLogout} />
+    <ProfileHeaderBar formData={p.formData} isDirty={p.isDirty} canDiscard={p.canDiscard} saving={p.saving || p.loading} initials={p.initials} onDiscard={p.discardChanges} onSave={p.saveAllChanges} onLogout={p.handleLogout} userRole={p.user?.role} />
     {p.loading ? <p role="status">Loading your profile…</p> : <div className="body-wrap">
       {p.user && <ProfileNav formData={p.formData} initials={p.initials} activeTab={p.activeTab} onSelectTab={p.setActiveTab} />}
       <div className="main">

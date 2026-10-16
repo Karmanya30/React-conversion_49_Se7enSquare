@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getHomeRoute } from '../../../services/roleAccess';
 
 /**
  * Top header bar for the Chat page — back button, brand, search/pin/member toggles, avatar.
@@ -19,7 +20,7 @@ export default function ChatHeader({
     <header className="header" style={{ flexShrink: 0 }}>
       <div className="header-left" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         <button
-          onClick={() => communityId ? navigate(`/community/${communityId}`) : navigate('/dashboard')}
+          onClick={() => communityId ? navigate(`/community/${communityId}`) : navigate(getHomeRoute(user?.role))}
           style={{
             background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)',
             color: 'var(--text-secondary,#aaa)', borderRadius: '8px', padding: '6px 14px',
@@ -31,7 +32,7 @@ export default function ChatHeader({
         <div
           className="header-title"
           style={{ cursor: 'pointer' }}
-          onClick={() => navigate('/dashboard')}
+          onClick={() => navigate(getHomeRoute(user?.role))}
         >
           Gameunity
         </div>

@@ -23,7 +23,7 @@ window.fetch = async (input, init = {}) => {
   if (isApi) {
     let user = null;
     try {
-      const raw = localStorage.getItem('nexus_user') || localStorage.getItem('currentUser');
+      const raw = localStorage.getItem('nexus_user') || localStorage.getItem('currentUser') || localStorage.getItem('user');
       if (raw) user = JSON.parse(raw);
     } catch {}
 

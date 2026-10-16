@@ -100,12 +100,17 @@ export default function useCommunityPage(id, navigate) {
     setTimeout(() => setToastMsg((cur) => (cur === msg ? null : cur)), 3000);
   };
 
+  const authHeaders = {
+    'x-role': user.role,
+    ...(user.id ? { 'x-user-id': String(user.id) } : {}),
+  };
+
   useEffect(() => {
     let cancelled = false;
     async function fetchCommunity() {
       setLoading(true);
       try {
-        const commRes = await fetch(`${API_BASE}/communities/${id}`, { headers: { 'x-role': user.role } });
+        const commRes = await fetch(`${API_BASE}/communities/${id}`, { headers: authHeaders });
         if (cancelled) return;
         if (commRes.ok) {
           const data = await commRes.json();
@@ -127,7 +132,7 @@ export default function useCommunityPage(id, navigate) {
       // reconciled with the server's membership list.
       if (user.id) {
         try {
-          const memsRes = await fetch(`${API_BASE}/memberships?userId=${user.id}`, { headers: { 'x-role': user.role } });
+          const memsRes = await fetch(`${API_BASE}/memberships?userId=${user.id}`, { headers: authHeaders });
           if (!cancelled && memsRes.ok) {
             const mems = await memsRes.json();
             if (Array.isArray(mems)) {
@@ -146,7 +151,7 @@ export default function useCommunityPage(id, navigate) {
     async function fetchPageData() {
       if (!community?.id) return;
       try {
-        const eventsRes = await fetch(`${API_BASE}/events`, { headers: { 'x-role': user.role } });
+        const eventsRes = await fetch(`${API_BASE}/events`, { headers: authHeaders });
         if (!cancelled && eventsRes.ok) {
           const all = await eventsRes.json();
           if (Array.isArray(all)) {
@@ -159,8 +164,8 @@ export default function useCommunityPage(id, navigate) {
 
       try {
         const [memsRes, usersRes] = await Promise.all([
-          fetch(`${API_BASE}/memberships?communityId=${community.id}`, { headers: { 'x-role': user.role } }),
-          fetch(`${API_BASE}/users?communityId=${community.id}`, { headers: { 'x-role': user.role } }),
+          fetch(`${API_BASE}/memberships?communityId=${community.id}`, { headers: authHeaders }),
+          fetch(`${API_BASE}/users?communityId=${community.id}`, { headers: authHeaders }),
         ]);
         if (cancelled) return;
         const mems = memsRes.ok ? await memsRes.json() : [];

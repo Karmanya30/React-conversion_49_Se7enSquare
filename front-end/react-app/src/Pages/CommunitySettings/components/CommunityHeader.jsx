@@ -1,16 +1,19 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { authService } from '../../../services/authService';
+import { getHomeRoute } from '../../../services/roleAccess';
 
 /**
  * Topbar header for Community Settings.
  */
 export default function CommunityHeader({ community, communityId, onAddChannel }) {
   const navigate = useNavigate();
+  const user = authService.getCurrentUser();
 
   return (
     <header className="topbar">
       <div className="topbar-left">
-        <div className="brand" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }}>
+        <div className="brand" onClick={() => navigate(getHomeRoute(user?.role))} style={{ cursor: 'pointer' }}>
           <div className="brand-mark">G</div>
           <div className="brand-name">Gameunity</div>
         </div>

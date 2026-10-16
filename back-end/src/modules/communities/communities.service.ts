@@ -20,7 +20,9 @@ export class CommunitiesService {
     return db.communities.map((c) => {
       const realMemberCount = db.memberships.filter((m) => m.communityId === c.id).length;
       const owner = db.users.find((u) => u.id === c.ownerId);
-      const ownerName = owner ? (owner.fullName || owner.name || owner.username || 'Community Owner') : 'Community Owner';
+      const ownerName = owner
+        ? ([owner.firstName, owner.lastName].filter(Boolean).join(' ') || owner.fullName || owner.name || owner.username || 'Community Owner')
+        : 'Community Owner';
       return {
         ...c,
         ownerName,
@@ -37,7 +39,9 @@ export class CommunitiesService {
     }
     const realMemberCount = db.memberships.filter((m) => m.communityId === community.id).length;
     const owner = db.users.find((u) => u.id === community.ownerId);
-    const ownerName = owner ? (owner.fullName || owner.name || owner.username || 'Community Owner') : 'Community Owner';
+    const ownerName = owner
+      ? ([owner.firstName, owner.lastName].filter(Boolean).join(' ') || owner.fullName || owner.name || owner.username || 'Community Owner')
+      : 'Community Owner';
     return {
       ...community,
       ownerName,

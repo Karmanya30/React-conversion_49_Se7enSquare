@@ -18,6 +18,8 @@ export interface UserRecord {
   bio?: string;
   firstName?: string;
   lastName?: string;
+  fullName?: string;
+  name?: string;
   phone?: string;
   avatar?: string | null;
   googleId?: string;
@@ -64,6 +66,7 @@ export interface CommunityRecord {
   createdAt?: string;
   memberCount?: number; // derived in UI/service
   onlineCount?: number;
+  ownerName?: string;
 }
 
 
@@ -456,11 +459,12 @@ if (fs.existsSync(DB_FILE)) {
     }
 
     if (parsed.db && typeof parsed.db === 'object') {
-      for (const key of Object.keys(seedDb) as Array<keyof typeof seedDb>) {
-        if (Array.isArray(seedDb[key])) {
-          db[key] = Array.isArray(parsed.db[key]) ? parsed.db[key] : JSON.parse(JSON.stringify(seedDb[key]));
-        } else if (typeof seedDb[key] === 'object' && seedDb[key] !== null) {
-          db[key] = { ...seedDb[key], ...(parsed.db[key] || {}) };
+      const allKeys = Array.from(new Set([...Object.keys(seedDb), ...Object.keys(parsed.db)]));
+      for (const key of allKeys) {
+        if (parsed.db[key] !== undefined) {
+          db[key] = parsed.db[key];
+        } else if (seedDb[key as keyof typeof seedDb] !== undefined) {
+          db[key] = JSON.parse(JSON.stringify(seedDb[key as keyof typeof seedDb]));
         }
       }
     }

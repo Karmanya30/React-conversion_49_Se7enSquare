@@ -22,7 +22,7 @@ export default function Chat() {
       <ChatHeader
         communityId={c.communityId}
         user={c.user}
-        membersCount={3}
+        membersCount={c.members.length}
         onToggleSearch={() => c.setShowSearch(s => !s)}
         onTogglePinned={() => c.setShowPinned(s => !s)}
         onToggleMembers={() => c.setShowMembers(s => !s)}
@@ -116,7 +116,7 @@ export default function Chat() {
         </main>
 
         {c.showMembers && (
-          <ChatMembersList onHide={() => c.setShowMembers(false)} />
+          <ChatMembersList members={c.members} onHide={() => c.setShowMembers(false)} />
         )}
       </div>
     </div>

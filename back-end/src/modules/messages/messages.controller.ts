@@ -1,5 +1,5 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Query } from '@nestjs/common';
+import { ApiQuery, ApiTags } from '@nestjs/swagger';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { AppRole } from '../rbac/role.enum';
 import { AddMessageAttachmentDto } from './dto/add-message-attachment.dto';
@@ -12,14 +12,22 @@ import { MessagesService } from './messages.service';
 export class MessagesController {
   constructor(private readonly service: MessagesService) {}
 
+  @Get('messages')
+  @Roles(AppRole.ADMIN, AppRole.COMMUNITY_MANAGER, AppRole.MODERATOR, AppRole.USER, AppRole.ORGANIZER, AppRole.OWNER)
+  @ApiQuery({ name: 'communityId', required: false })
+  @ApiQuery({ name: 'channelId', required: false })
+  findAll(@Query('communityId') communityId?: string, @Query('channelId') channelId?: string) {
+    return this.service.findAll(communityId ? Number(communityId) : undefined, channelId);
+  }
+
   @Get('channels/:id/messages')
-  @Roles(AppRole.ADMIN, AppRole.COMMUNITY_MANAGER, AppRole.MODERATOR, AppRole.USER, AppRole.ORGANIZER)
+  @Roles(AppRole.ADMIN, AppRole.COMMUNITY_MANAGER, AppRole.MODERATOR, AppRole.USER, AppRole.ORGANIZER, AppRole.OWNER)
   findByChannel(@Param('id') channelId: string) {
     return this.service.findByChannel(channelId);
   }
 
   @Post('messages')
-  @Roles(AppRole.ADMIN, AppRole.COMMUNITY_MANAGER, AppRole.MODERATOR, AppRole.USER, AppRole.ORGANIZER)
+  @Roles(AppRole.ADMIN, AppRole.COMMUNITY_MANAGER, AppRole.MODERATOR, AppRole.USER, AppRole.ORGANIZER, AppRole.OWNER)
   create(@Body() payload: CreateMessageDto) {
     return this.service.create(payload);
   }

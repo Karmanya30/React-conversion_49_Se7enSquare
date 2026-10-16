@@ -45,14 +45,35 @@ export default function useCommunitySettings() {
   useEffect(() => {
     async function loadCommunity() {
       try {
-        const res = await fetch(`${API_BASE}/communities/${communityId}`, {
-          headers: { 'x-role': getRole() },
-        });
-        if (res.ok) {
-          const data = await res.json();
+        const [commRes, memsRes, usersRes] = await Promise.all([
+          fetch(`${API_BASE}/communities/${communityId}`, { headers: { 'x-role': getRole() } }),
+          fetch(`${API_BASE}/memberships?communityId=${communityId}`, { headers: { 'x-role': getRole() } }),
+          fetch(`${API_BASE}/users`, { headers: { 'x-role': getRole() } }),
+        ]);
+        if (commRes.ok) {
+          const data = await commRes.json();
+          let membersList = [];
+          if (memsRes.ok && usersRes.ok) {
+            const mems = await memsRes.json();
+            const usrs = await usersRes.json();
+            const usersById = new Map((Array.isArray(usrs) ? usrs : []).map(u => [String(u.id), u]));
+            membersList = (Array.isArray(mems) ? mems : []).map(m => {
+              const u = usersById.get(String(m.userId)) || {};
+              const uName = u.fullName || u.name || u.username || `User #${m.userId}`;
+              return {
+                id: m.id,
+                userId: m.userId,
+                name: uName,
+                handle: `@${u.username || 'user'}`,
+                role: u.id === data.ownerId ? 'Owner' : (u.role || 'Member'),
+                initials: uName.slice(0, 2).toUpperCase(),
+              };
+            });
+          }
           const loaded = {
             ...DEFAULT_COMMUNITY,
             ...data,
+            members: membersList,
             rules: Array.isArray(data.rules)
               ? data.rules.join('\n')
               : data.rules || DEFAULT_COMMUNITY.rules,

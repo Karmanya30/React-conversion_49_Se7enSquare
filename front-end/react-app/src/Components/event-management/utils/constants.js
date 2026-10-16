@@ -25,13 +25,7 @@ export const EVENT_STATUSES = {
   CANCELLED: 'cancelled',
 };
 
-export const DEFAULT_COMMUNITIES = [
-  { id: 1, name: 'Valorant India', icon: '🎯', slug: 'valorant-india' },
-  { id: 2, name: 'BGMI Champions', icon: '🏆', slug: 'bgmi-champions' },
-  { id: 3, name: 'CS2 Elite Club', icon: '⚡', slug: 'cs2-elite' },
-  { id: 4, name: 'Apex Legends Hub', icon: '🔥', slug: 'apex-hub' },
-  { id: 5, name: 'Chess Masters', icon: '♟️', slug: 'chess-masters' },
-];
+export const DEFAULT_COMMUNITIES = [];
 
 export function getCurrentUser() {
   try {

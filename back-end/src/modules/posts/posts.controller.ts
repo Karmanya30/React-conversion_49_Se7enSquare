@@ -7,6 +7,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import {
   ApiBody,
@@ -15,6 +16,7 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiParam,
+  ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -35,15 +37,16 @@ export class PostsController {
   constructor(private readonly postsService: PostsService) {}
 
   @Get()
-  @Roles(AppRole.ADMIN, AppRole.COMMUNITY_MANAGER, AppRole.MODERATOR, AppRole.USER, AppRole.ORGANIZER)
+  @Roles(AppRole.ADMIN, AppRole.COMMUNITY_MANAGER, AppRole.MODERATOR, AppRole.USER, AppRole.ORGANIZER, AppRole.OWNER)
   @ApiOperation({ summary: 'Get all posts' })
+  @ApiQuery({ name: 'communityId', required: false, type: Number })
   @ApiOkResponse({ type: PostDto, isArray: true })
-  findAll() {
-    return this.postsService.findAll();
+  findAll(@Query('communityId') communityId?: string) {
+    return this.postsService.findAll(communityId ? Number(communityId) : undefined);
   }
 
   @Get(':id')
-  @Roles(AppRole.ADMIN, AppRole.COMMUNITY_MANAGER, AppRole.MODERATOR, AppRole.USER, AppRole.ORGANIZER)
+  @Roles(AppRole.ADMIN, AppRole.COMMUNITY_MANAGER, AppRole.MODERATOR, AppRole.USER, AppRole.ORGANIZER, AppRole.OWNER)
   @ApiOperation({ summary: 'Get post by id' })
   @ApiParam({ name: 'id', type: Number })
   @ApiOkResponse({ type: PostDto })

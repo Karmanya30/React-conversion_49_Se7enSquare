@@ -9,8 +9,8 @@ export default function ModHeader({ user, navigate }) {
       <div className="header-title">Mod Panel</div>
       <div className="mod-badge">MOD PANEL</div>
       <div className="comm-chip" id="activeCommChip">
-        <span id="activeCommIcon">⚡</span>
-        <span id="activeCommName">Pro Gamers</span>
+        <span id="activeCommIcon">🛡️</span>
+        <span id="activeCommName">{user.communityName || 'Platform Moderation'}</span>
       </div>
       <div className="header-actions">
         <div className="icon-btn">🔔</div>

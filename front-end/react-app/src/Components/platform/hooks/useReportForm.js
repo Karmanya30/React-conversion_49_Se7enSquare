@@ -78,18 +78,7 @@ export default function useReportForm() {
         return;
       }
     } catch {}
-    // Fallback demo users
-    const demo = [
-      { id: 1, name: 'Rajat Jain', username: 'rajat' },
-      { id: 2, name: 'Karmanya', username: 'karmanya' },
-      { id: 3, name: 'Awadhesh', username: 'awadhesh' },
-      { id: 4, name: 'Anant', username: 'anant' },
-    ].filter(
-      (u) =>
-        u.name.toLowerCase().includes(val.toLowerCase()) ||
-        u.username.toLowerCase().includes(val.toLowerCase())
-    );
-    setSearchResults(demo);
+    setSearchResults([]);
   };
 
   const submitReport = async () => {

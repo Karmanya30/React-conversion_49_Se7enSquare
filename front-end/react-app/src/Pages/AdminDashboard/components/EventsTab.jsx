@@ -6,10 +6,7 @@ import { useNavigate } from 'react-router-dom';
  */
 export default function EventsTab({ events }) {
   const navigate = useNavigate();
-  const eventsList = events.length > 0 ? events : [
-    { id: 1, title: 'Gaming Hackathon', community: 'Pro Gamers', status: 'approved', date: '2025-03-07' },
-    { id: 2, title: 'Frontend Workshop', community: 'Dev Nexus', status: 'approved', date: '2025-03-09' },
-  ];
+  const eventsList = events || [];
 
   return (
     <div className="admin-page active" id="page-events-mgmt">
@@ -22,12 +19,17 @@ export default function EventsTab({ events }) {
           Event Approval →
         </button>
       </div>
-      {eventsList.map((ev) => (
-        <div
-          key={ev.id}
-          className="card"
-          style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '10px' }}
-        >
+      {eventsList.length === 0 ? (
+        <div className="card" style={{ textAlign: 'center', padding: '36px', color: 'var(--text-3, #888)' }}>
+          📅 No platform events scheduled yet.
+        </div>
+      ) : (
+        eventsList.map((ev) => (
+          <div
+            key={ev.id}
+            className="card"
+            style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '10px' }}
+          >
           <span style={{ fontSize: '20px' }}>📅</span>
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 600, fontSize: '14px', color: '#fff' }}>{ev.title}</div>
@@ -48,7 +50,7 @@ export default function EventsTab({ events }) {
             {(ev.status || 'PENDING').toUpperCase()}
           </span>
         </div>
-      ))}
+      )))}
     </div>
   );
 }

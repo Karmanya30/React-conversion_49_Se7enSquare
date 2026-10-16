@@ -4,19 +4,22 @@ import React from 'react';
  * Open appeals cards with Approve and Reject actions.
  */
 export default function AppealsTab({ appeals, onAppeal }) {
-  const appealsList = appeals.length > 0 ? appeals : [
-    { id: 1, appealType: 'Misunderstanding', status: 'pending', userId: 3 },
-  ];
+  const appealsList = appeals || [];
 
   return (
     <div className="admin-page active" id="page-appeals">
       <h3 style={{ fontFamily: "'Syne',sans-serif", marginBottom: '16px' }}>Open Appeals</h3>
-      {appealsList.map((ap) => (
-        <div
-          key={ap.id}
-          className="card"
-          style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '10px' }}
-        >
+      {appealsList.length === 0 ? (
+        <div className="card" style={{ textAlign: 'center', padding: '36px', color: 'var(--text-3, #888)' }}>
+          ⚖️ No open appeals in queue.
+        </div>
+      ) : (
+        appealsList.map((ap) => (
+          <div
+            key={ap.id}
+            className="card"
+            style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '10px' }}
+          >
           <span style={{ fontSize: '20px' }}>⚖️</span>
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 600, fontSize: '14px', color: '#fff' }}>Appeal #{ap.id}</div>
@@ -42,7 +45,7 @@ export default function AppealsTab({ appeals, onAppeal }) {
             </button>
           </div>
         </div>
-      ))}
+      )))}
     </div>
   );
 }

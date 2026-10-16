@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { DEFAULT_COMMUNITIES, memberCountOf, onlineCountOf } from '../data/discoveryData';
+import { memberCountOf, onlineCountOf } from '../data/discoveryData';
 
 // Use Vite's built-in proxy (/api -> http://localhost:3000) to avoid CORS issues.
 const API_BASE = '/api';
@@ -41,7 +41,7 @@ async function apiErrorMessage(res) {
  * join/leave toggling for the Discovery page.
  */
 export default function useDiscovery() {
-  const [communities, setCommunities] = useState(DEFAULT_COMMUNITIES);
+  const [communities, setCommunities] = useState([]);
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
   const [sortBy, setSortBy] = useState('active');
@@ -64,20 +64,23 @@ export default function useDiscovery() {
       const role = user.role; // always 'user' or better thanks to getCurrentUser()
       const headers = { 'x-role': role };
 
-      // --- 1. Fetch communities (primary — triggers warning on failure) ---
+      // --- 1. Fetch communities (primary) ---
       try {
         const commsRes = await fetch(`${API_BASE}/communities`, { headers });
         if (cancelled) return;
         if (commsRes.ok) {
           const data = await commsRes.json();
-          if (Array.isArray(data) && data.length > 0) setCommunities(data);
+          setCommunities(Array.isArray(data) ? data : []);
           setLoadWarning('');
         } else {
-          setLoadWarning(`Could not load communities (${commsRes.status}). Showing demo data.`);
+          setCommunities([]);
+          setLoadWarning(`Could not load communities (${commsRes.status}).`);
         }
       } catch {
-        if (!cancelled)
-          setLoadWarning('Backend unreachable — showing demo data.');
+        if (!cancelled) {
+          setCommunities([]);
+          setLoadWarning('Backend unreachable. Please verify the server is running.');
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }

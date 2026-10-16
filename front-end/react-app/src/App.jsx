@@ -97,6 +97,7 @@ export default function App() {
         path="/admin-dashboard.html"
         element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>}
       />
+      <Route path="/admin" element={<Navigate to="/admin-dashboard" replace />} />
       <Route
         path="/owner-dashboard"
         element={<ProtectedRoute allowedRoles={['owner', 'admin']}><OwnerDashboard /></ProtectedRoute>}
@@ -105,6 +106,7 @@ export default function App() {
         path="/owner-dashboard.html"
         element={<ProtectedRoute allowedRoles={['owner', 'admin']}><OwnerDashboard /></ProtectedRoute>}
       />
+      <Route path="/owner" element={<Navigate to="/owner-dashboard" replace />} />
       <Route
         path="/organizer-dashboard"
         element={<ProtectedRoute allowedRoles={['organizer', 'admin']}><OrganizerDashboard /></ProtectedRoute>}
@@ -113,6 +115,7 @@ export default function App() {
         path="/organizer-dashboard.html"
         element={<ProtectedRoute allowedRoles={['organizer', 'admin']}><OrganizerDashboard /></ProtectedRoute>}
       />
+      <Route path="/organizer" element={<Navigate to="/organizer-dashboard" replace />} />
       <Route
         path="/mod-panel"
         element={<ProtectedRoute allowedRoles={['moderator', 'admin']}><ModPanel /></ProtectedRoute>}
@@ -121,6 +124,7 @@ export default function App() {
         path="/mod-panel.html"
         element={<ProtectedRoute allowedRoles={['moderator', 'admin']}><ModPanel /></ProtectedRoute>}
       />
+      <Route path="/mod" element={<Navigate to="/mod-panel" replace />} />
       <Route
         path="/event-approval"
         element={<ProtectedRoute allowedRoles={['community_manager', 'manager', 'admin']}><EventApproval /></ProtectedRoute>}

@@ -10,6 +10,23 @@ export default function CommunityAboutWidget({
   community, channelEntries, foundedLabel, events,
 }) {
   const navigate = useNavigate();
+  const [messages, setMessages] = React.useState([]);
+  const [loadingMessages, setLoadingMessages] = React.useState(true);
+
+  React.useEffect(() => {
+    if (!community?.id) return;
+    fetch(`http://localhost:3000/api/messages?communityId=${community.id}`)
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setMessages(data.slice(-5).reverse());
+        } else {
+          setMessages([]);
+        }
+      })
+      .catch(() => setMessages([]))
+      .finally(() => setLoadingMessages(false));
+  }, [community?.id]);
 
   return (
     <div className="tab-content active" id="tab-overview">
@@ -61,49 +78,51 @@ export default function CommunityAboutWidget({
               <div className="stat-lbl">Channels</div>
             </div>
             <div className="stat-box">
-              <div className="stat-val">—</div>
-              <div className="stat-lbl">Messages Sent</div>
+              <div className="stat-val">{messages.length}</div>
+              <div className="stat-lbl">Recent Messages</div>
             </div>
           </div>
         </div>
 
-        {/* Recent Messages — static demo content, same as the legacy page */}
+        {/* Recent Messages */}
         <div className="section-card">
           <div className="sc-title"><span className="sc-title-icon">💬</span> Recent Messages</div>
           <div className="messages-feed">
-            {[
-              { initials: 'AM', name: 'Alex Morgan', time: '10:41 AM', text: "This looks incredible! Love the design direction. Are you using Gameunity's design system?", reactions: [] },
-              { initials: 'MP', name: 'Maya Petrov', time: '10:44 AM', text: "Sharing our team's early UI mockup for the hackathon 👀", reactions: [{ emoji: '🔥', count: 22 }, { emoji: '😍', count: 8 }] },
-              { initials: 'RK', name: 'Rahul Kumar', time: '10:08 AM', role: 'Moderator', text: 'Check out the nexus-cli setup snippet in #dev-talk', reactions: [] },
-            ].map((msg, i) => (
-              <div key={i} className="msg-group">
-                <div className="msg-av" style={{ fontWeight: 700, fontSize: '12px', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: i === 0 ? '#6366f1' : i === 1 ? '#ec4899' : '#8b5cf6', color: '#fff' }}>
-                  {msg.initials}
-                </div>
-                <div className="msg-body">
-                  <div className="msg-header">
-                    <span className="msg-uname">{msg.name}</span>
-                    {msg.role && <span className="msg-role role-moderator-badge">{msg.role}</span>}
-                    <span className="msg-time">{msg.time}</span>
-                  </div>
-                  <div className="msg-text">{msg.text}</div>
-                  {msg.reactions.length > 0 && (
-                    <div className="reactions">
-                      {msg.reactions.map((r, j) => (
-                        <div key={j} className="FPS-pill"><span>{r.emoji}</span><span className="FPS-count">{r.count}</span></div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+            {loadingMessages ? (
+              <div style={{ padding: '20px', color: 'var(--text-3,#888)', fontSize: '13px' }}>Loading messages…</div>
+            ) : messages.length === 0 ? (
+              <div style={{ padding: '20px', color: 'var(--text-3,#888)', fontSize: '13px', textAlign: 'center' }}>
+                No messages in this community yet. Be the first to start the conversation!
               </div>
-            ))}
+            ) : (
+              messages.map((msg, i) => {
+                const authorName = msg.authorName || msg.author?.name || 'User';
+                const initials = initialsFromName(authorName);
+                const time = msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+                return (
+                  <div key={msg.id || i} className="msg-group">
+                    <div className="msg-av" style={{ fontWeight: 700, fontSize: '12px', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: '#6366f1', color: '#fff' }}>
+                      {initials}
+                    </div>
+                    <div className="msg-body">
+                      <div className="msg-header">
+                        <span className="msg-uname">{authorName}</span>
+                        {msg.role && <span className="msg-role role-moderator-badge">{msg.role}</span>}
+                        <span className="msg-time">{time}</span>
+                      </div>
+                      <div className="msg-text">{msg.content || msg.text}</div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
           <div className="view-more-messages">
             <button
               className="view-more-btn"
               onClick={() => navigate(`/chat?community=${community.id}&cname=${encodeURIComponent(community.name)}`)}
             >
-              View Community Posts →
+              Open Community Chat →
             </button>
           </div>
         </div>

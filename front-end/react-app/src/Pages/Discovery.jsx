@@ -88,7 +88,7 @@ function DiscoveryHero({ search, onSearchChange, communities, totalMembers, tota
         <div className="hero-title">
           Find your next <span>community</span>
         </div>
-        <div className="hero-sub">Browse 50,000+ communities across every interest, topic, and niche.</div>
+        <div className="hero-sub">Explore active gaming communities across every genre, skill level, and interest.</div>
         <div className="search-bar">
           <span className="search-icon">🔍</span>
           <input
@@ -105,7 +105,7 @@ function DiscoveryHero({ search, onSearchChange, communities, totalMembers, tota
           <div className="h-stat">🏘️ <strong>{communities.length.toLocaleString()}</strong>&nbsp;communities</div>
           <div className="h-stat">👥 <strong>{fmtStat(totalMembers)}</strong>&nbsp;members</div>
           <div className="h-stat">🟢 <strong>{totalOnline.toLocaleString()}</strong>&nbsp;online now</div>
-          <div className="h-stat">📅 <strong>{eventCount !== null ? eventCount.toLocaleString() : '1,400+'}</strong>&nbsp;events this week</div>
+          <div className="h-stat">📅 <strong>{eventCount !== null ? eventCount.toLocaleString() : '0'}</strong>&nbsp;upcoming events</div>
         </div>
       </div>
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ACTION_DETAILS, TIMELINE_EVENTS, NEXT_STEPS } from '../../../Components/platform/data/appealData';
+import { NEXT_STEPS } from '../../../Components/platform/data/appealData';
 
 /**
  * Appeal page header — back button and breadcrumb.
@@ -15,7 +15,7 @@ export function AppealHeader({ navigate }) {
           ← Back to Settings
         </button>
         <div className="breadcrumb">
-          <span>Pro Gamers</span><span className="sep">›</span>
+          <span>Platform</span><span className="sep">›</span>
           <span>Account</span><span className="sep">›</span>
           <span className="current">⚖️ Submit Appeal</span>
         </div>
@@ -29,45 +29,55 @@ export function AppealHeader({ navigate }) {
 }
 
 /**
- * Action details card + timeline shown at the top of the appeal form.
+ * Action details card shown at the top of the appeal form.
  */
-export function ActionDetailsCard() {
-  return (
-    <>
-      <div className="action-card">
+export function ActionDetailsCard({ action }) {
+  if (!action) {
+    return (
+      <div className="action-card" style={{ marginBottom: '20px' }}>
         <div className="action-header">
-          <div className="action-severity severity-ban">🚫</div>
+          <div className="action-severity severity-ban">⚖️</div>
           <div className="action-hinfo">
-            <div className="action-type">Temporary Ban — 7 Days</div>
-            <div className="action-community"><span>⚡</span> Pro Gamers · Issued by moderator</div>
+            <div className="action-type">Account Standing & Appeal Overview</div>
+            <div className="action-community"><span>🛡️</span> Se7enSquare Trust & Safety</div>
           </div>
-          <span className="action-badge badge-temp">⏳ Active · 5 days remaining</span>
+          <span className="action-badge badge-temp">Active Standing</span>
         </div>
         <div className="action-details">
-          {ACTION_DETAILS.map((row, i) => (
-            <div key={i} className="detail-row">
-              <div className="detail-key">{row.key}</div>
-              <div className={`detail-val${row.cls ? ` ${row.cls}` : ''}`}>{row.val}</div>
-            </div>
-          ))}
+          <div className="detail-row">
+            <div className="detail-key">Policy Scope</div>
+            <div className="detail-val">Community Guidelines & Terms of Service</div>
+          </div>
+          <div className="detail-row">
+            <div className="detail-key">Review Window</div>
+            <div className="detail-val">24–48 hours upon submission</div>
+          </div>
         </div>
       </div>
+    );
+  }
 
-      <div className="timeline-card">
-        <div className="tc-title">📋 Action Timeline</div>
-        <div className="timeline">
-          {TIMELINE_EVENTS.map((item, i) => (
-            <div key={i} className="tl-item">
-              <div className={`tl-dot ${item.dot}`}>{item.icon}</div>
-              <div className="tl-info">
-                <div className="tl-event">{item.event}</div>
-                <div className="tl-time">{item.time}</div>
-              </div>
-            </div>
-          ))}
+  return (
+    <div className="action-card">
+      <div className="action-header">
+        <div className="action-severity severity-ban">🚫</div>
+        <div className="action-hinfo">
+          <div className="action-type">{action.type || 'Moderation Action'}</div>
+          <div className="action-community"><span>⚡</span> {action.community || 'Community'} · Issued by moderator</div>
+        </div>
+        <span className="action-badge badge-temp">Active Action</span>
+      </div>
+      <div className="action-details">
+        <div className="detail-row">
+          <div className="detail-key">Reason Given</div>
+          <div className="detail-val">{action.reason || 'Guidelines violation'}</div>
+        </div>
+        <div className="detail-row">
+          <div className="detail-key">Action ID</div>
+          <div className="detail-val mono">{action.id || 'ACT-PENDING'}</div>
         </div>
       </div>
-    </>
+    </div>
   );
 }
 

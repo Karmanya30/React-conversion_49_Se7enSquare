@@ -66,12 +66,18 @@ export default function ModActionPanel({
         ))}
 
         <div className="sp-title" style={{ marginTop: '24px' }}>Recent Actions</div>
-        {recentActions.map(r => (
-          <div key={r.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--border,rgba(255,255,255,0.05))', fontSize: '12px' }}>
-            <div style={{ fontWeight: 600, color: 'var(--text-secondary,#ccc)' }}>{r.action}</div>
-            <div style={{ color: 'var(--text-3,#666)', marginTop: '2px' }}>@{r.reportedUser} · {r.ref}</div>
+        {recentActions.length === 0 ? (
+          <div style={{ padding: '12px 0', color: 'var(--text-3,#666)', fontSize: '12px' }}>
+            No recent actions recorded.
           </div>
-        ))}
+        ) : (
+          recentActions.map(r => (
+            <div key={r.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--border,rgba(255,255,255,0.05))', fontSize: '12px' }}>
+              <div style={{ fontWeight: 600, color: 'var(--text-secondary,#ccc)' }}>{r.action}</div>
+              <div style={{ color: 'var(--text-3,#666)', marginTop: '2px' }}>@{r.reportedUser} · {r.ref}</div>
+            </div>
+          ))
+        )}
       </div>
     </>
   );

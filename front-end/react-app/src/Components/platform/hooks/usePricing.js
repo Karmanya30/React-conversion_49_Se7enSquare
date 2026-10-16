@@ -51,12 +51,12 @@ export default function usePricing() {
       if (res.ok) {
         setCurrentPlan(planId);
         showToast('✅', `Now on the ${targetPlan.name} plan`);
-        return;
+      } else {
+        showToast('⚠️', 'Could not update subscription plan.');
       }
-    } catch {}
-
-    setCurrentPlan(planId);
-    showToast('✅', `Now on the ${targetPlan.name} plan`);
+    } catch {
+      showToast('⚠️', 'Could not update subscription plan.');
+    }
   };
 
   const handleCancelSubscription = async () => {
@@ -65,7 +65,7 @@ export default function usePricing() {
       return;
     }
     try {
-      await fetch(`${API_BASE}/subscriptions/cancel`, {
+      const res = await fetch(`${API_BASE}/subscriptions/cancel`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -73,9 +73,15 @@ export default function usePricing() {
         },
         body: JSON.stringify({ userId: Number(user.id) }),
       });
-    } catch {}
-    setCurrentPlan('free');
-    showToast('✅', 'Subscription cancelled — Reverted to the Free plan');
+      if (res.ok) {
+        setCurrentPlan('free');
+        showToast('✅', 'Subscription cancelled — Reverted to the Free plan');
+      } else {
+        showToast('⚠️', 'Could not cancel subscription.');
+      }
+    } catch {
+      showToast('⚠️', 'Could not cancel subscription.');
+    }
   };
 
   return {

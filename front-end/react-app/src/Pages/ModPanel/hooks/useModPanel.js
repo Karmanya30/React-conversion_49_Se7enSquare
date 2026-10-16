@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { DEFAULT_REPORTS, QUEUE_TABS, MOD_ACTIONS } from '../../../Components/platform/data/modPanelData';
+import { QUEUE_TABS, MOD_ACTIONS } from '../../../Components/platform/data/modPanelData';
 import { moderationService } from '../../../services/moderationService';
 import { authService } from '../../../services/authService';
 
@@ -8,8 +8,8 @@ function getUser() {
   const u = authService.getCurrentUser();
   return {
     role: u?.role || 'moderator',
-    firstName: u?.firstName || u?.username || 'Karmanya',
-    username: u?.username || 'karmanya',
+    firstName: u?.firstName || u?.username || 'Moderator',
+    username: u?.username || 'moderator',
   };
 }
 
@@ -20,9 +20,9 @@ export default function useModPanel() {
   const navigate = useNavigate();
   const user = getUser();
 
-  const [reports, setReports] = useState(DEFAULT_REPORTS);
+  const [reports, setReports] = useState([]);
   const [activeQTab, setActiveQTab] = useState('pending');
-  const [selectedReport, setSelectedReport] = useState(DEFAULT_REPORTS[0]);
+  const [selectedReport, setSelectedReport] = useState(null);
   const [queueSearch, setQueueSearch] = useState('');
   const [actionNote, setActionNote] = useState('');
   const [toast, setToast] = useState({ show: false, msg: '' });
@@ -39,25 +39,35 @@ export default function useModPanel() {
     async function fetchReports() {
       try {
         const data = await moderationService.getReports();
-        if (Array.isArray(data) && data.length > 0) {
-          setReports(
-            data.map((r) => ({
-              id: r.id,
-              ref: r.ref || `RPT-${r.id}`,
-              type: r.targetType || 'message',
-              reportedUser: r.reportedUser?.username || r.targetId || 'Unknown',
-              channel: r.channel || '#general',
-              reason: r.reason || 'Violation',
-              status: r.status || 'pending',
-              date: r.createdAt ? new Date(r.createdAt).toLocaleString() : '',
-              context: r.context || '',
-              severity: r.severity || 'medium',
-              action: r.action,
-            }))
-          );
+        if (Array.isArray(data)) {
+          const mapped = data.map((r) => ({
+            id: r.id,
+            ref: r.ref || `RPT-${r.id}`,
+            type: r.targetType || 'message',
+            reportedUser: r.reportedUser?.username || r.targetId || 'Unknown',
+            channel: r.channel || '#general',
+            reason: r.reason || 'Violation',
+            status: r.status || 'pending',
+            date: r.createdAt ? new Date(r.createdAt).toLocaleString() : '',
+            context: r.context || '',
+            severity: r.severity || 'medium',
+            action: r.action,
+          }));
+          setReports(mapped);
+          setSelectedReport((prev) => {
+            if (prev) {
+              const stillExists = mapped.find((m) => m.id === prev.id);
+              if (stillExists) return stillExists;
+            }
+            return mapped.length > 0 ? mapped[0] : null;
+          });
+        } else {
+          setReports([]);
+          setSelectedReport(null);
         }
       } catch {
-        // Fallback to default mock data if offline
+        setReports([]);
+        setSelectedReport(null);
       } finally {
         setLoading(false);
       }

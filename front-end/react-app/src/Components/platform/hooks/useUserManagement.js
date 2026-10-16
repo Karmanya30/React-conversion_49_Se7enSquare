@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { DEFAULT_USERS } from '../data/userData';
+
 
 const API_BASE = 'http://localhost:3000/api';
 
@@ -25,15 +25,11 @@ export default function useUserManagement() {
     fetch(`${API_BASE}/users`, { headers: { 'x-role': role } })
       .then(res => (res.ok ? res.json() : []))
       .then(data => {
-        if (Array.isArray(data) && data.length > 0) {
-          setUsers(data);
-        } else {
-          setUsers(DEFAULT_USERS);
-        }
+        setUsers(Array.isArray(data) ? data : []);
         setLoading(false);
       })
       .catch(() => {
-        setUsers(DEFAULT_USERS);
+        setUsers([]);
         setLoading(false);
       });
   }, []);

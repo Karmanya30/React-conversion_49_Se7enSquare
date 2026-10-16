@@ -17,7 +17,14 @@ export class CommunitiesService {
   constructor(private readonly subscriptionsService: SubscriptionsService) {}
 
   findAll(): CommunityRecord[] {
-    return db.communities;
+    return db.communities.map((c) => {
+      const realMemberCount = db.memberships.filter((m) => m.communityId === c.id).length;
+      return {
+        ...c,
+        memberCount: realMemberCount,
+        onlineCount: realMemberCount > 0 ? Math.max(1, Math.round(realMemberCount * 0.4)) : 0,
+      };
+    });
   }
 
   findOne(id: number): CommunityRecord {
@@ -25,7 +32,12 @@ export class CommunitiesService {
     if (!community) {
       throw new NotFoundException(`Community with id ${id} not found`);
     }
-    return community;
+    const realMemberCount = db.memberships.filter((m) => m.communityId === community.id).length;
+    return {
+      ...community,
+      memberCount: realMemberCount,
+      onlineCount: realMemberCount > 0 ? Math.max(1, Math.round(realMemberCount * 0.4)) : 0,
+    };
   }
 
   create(payload: CreateCommunityDto): CommunityRecord {

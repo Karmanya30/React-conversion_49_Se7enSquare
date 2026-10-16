@@ -1,11 +1,14 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { db, nextId, PostRecord } from '../../common/utils/in-memory-db';
+import { db, nextId, PostRecord, saveDb } from '../../common/utils/in-memory-db';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 
 @Injectable()
 export class PostsService {
-  findAll(): PostRecord[] {
+  findAll(communityId?: number): PostRecord[] {
+    if (communityId) {
+      return db.posts.filter((item) => item.communityId === communityId);
+    }
     return db.posts;
   }
 
@@ -26,6 +29,7 @@ export class PostsService {
     };
 
     db.posts.push(created);
+    saveDb();
     return created;
   }
 
@@ -37,6 +41,7 @@ export class PostsService {
     this.validateReferences(communityId, authorId);
 
     Object.assign(post, payload);
+    saveDb();
     return post;
   }
 
@@ -44,6 +49,7 @@ export class PostsService {
     this.findOne(id);
     db.posts = db.posts.filter((item) => item.id !== id);
     db.reports = db.reports.filter((item) => !(item.targetType === 'post' && item.targetId === id));
+    saveDb();
     return { message: `Post ${id} deleted` };
   }
 

@@ -20,47 +20,55 @@ export default function CommunitiesTab({ communities, setCommunities, addAuditLo
               </tr>
             </thead>
             <tbody>
-              {communities.map((c) => (
-                <tr key={c.id}>
-                  <td>
-                    <div style={{ fontWeight: 600, color: '#fff' }}>{c.name}</div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-3,#666)' }}>{c.desc}</div>
-                  </td>
-                  <td>@{c.owner}</td>
-                  <td>{c.members} members</td>
-                  <td>
-                    <span className={`admin-badge-status ${c.status || 'active'}`}>
-                      {(c.status || 'ACTIVE').toUpperCase()}
-                    </span>
-                  </td>
-                  <td>
-                    <div style={{ display: 'flex', gap: '6px' }}>
-                      <button
-                        className="act-btn act-view"
-                        onClick={() => navigate(`/community-page?id=${c.id}`)}
-                      >
-                        View
-                      </button>
-                      <button
-                        className="act-btn act-delete"
-                        onClick={() => {
-                          const newStatus = c.status === 'suspended' ? 'active' : 'suspended';
-                          setCommunities((prev) =>
-                            prev.map((item) => (item.id === c.id ? { ...item, status: newStatus } : item))
-                          );
-                          addAuditLog(
-                            `${newStatus === 'suspended' ? 'Suspended' : 'Restored'} community: ${c.name}`,
-                            'community'
-                          );
-                          showToast(`Community ${newStatus}`);
-                        }}
-                      >
-                        {c.status === 'suspended' ? 'Restore' : 'Suspend'}
-                      </button>
-                    </div>
+              {communities.length === 0 ? (
+                <tr>
+                  <td colSpan="5" style={{ textAlign: 'center', padding: '24px', color: 'var(--text-3, #888)' }}>
+                    No communities found.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                communities.map((c) => (
+                  <tr key={c.id}>
+                    <td>
+                      <div style={{ fontWeight: 600, color: '#fff' }}>{c.name}</div>
+                      <div style={{ fontSize: '12px', color: 'var(--text-3,#666)' }}>{c.description || c.desc || ''}</div>
+                    </td>
+                    <td>@{c.owner || c.ownerUsername || (c.ownerId ? `User #${c.ownerId}` : 'owner')}</td>
+                    <td>{c.memberCount ?? c.members ?? 0} members</td>
+                    <td>
+                      <span className={`admin-badge-status ${c.status || 'active'}`}>
+                        {(c.status || 'ACTIVE').toUpperCase()}
+                      </span>
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <button
+                          className="act-btn act-view"
+                          onClick={() => navigate(`/community-page?id=${c.id}`)}
+                        >
+                          View
+                        </button>
+                        <button
+                          className="act-btn act-delete"
+                          onClick={() => {
+                            const newStatus = c.status === 'suspended' ? 'active' : 'suspended';
+                            setCommunities((prev) =>
+                              prev.map((item) => (item.id === c.id ? { ...item, status: newStatus } : item))
+                            );
+                            addAuditLog(
+                              `${newStatus === 'suspended' ? 'Suspended' : 'Restored'} community: ${c.name}`,
+                              'community'
+                            );
+                            showToast(`Community ${newStatus}`);
+                          }}
+                        >
+                          {c.status === 'suspended' ? 'Restore' : 'Suspend'}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

@@ -15,6 +15,7 @@ export class DashboardService {
       pendingAppealsCount: db.appeals.filter((appeal) => appeal.status === 'pending').length,
       pendingEventsCount: db.events.filter((event) => event.status === 'pending').length,
       totalMemberships: db.memberships.length,
+      totalMessages: db.messages.length,
     };
   }
 

@@ -3,22 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { dashboardService } from '../../../services/dashboardService';
 import { authService } from '../../../services/authService';
 
-const DEFAULT_COMMUNITIES = [
-  { id: 1, name: 'Pro Gamers', icon: '⚡', memberCount: 2451, description: 'Competitive gaming community' },
-  { id: 2, name: 'Dev Nexus', icon: '💻', memberCount: 1200, description: 'Web developers and engineers' },
-];
-
-const DEFAULT_NOTIFICATIONS = [
-  { id: 1, icon: '💬', text: 'Rahul Kumar mentioned you in #general', time: '10 min ago', read: false },
-  { id: 2, icon: '📅', text: 'Gaming Hackathon starts tomorrow at 2:00 PM', time: '1 hr ago', read: false },
-  { id: 3, icon: '👥', text: 'Priya Sharma joined Pro Gamers', time: '2 hr ago', read: true },
-];
-
-const DEFAULT_EVENTS = [
-  { id: 1, title: 'Gaming Hackathon', community: 'Pro Gamers', date: 'Mar 7, 2025', time: '2:00 PM IST', type: '🏆' },
-  { id: 2, title: 'Frontend Workshop', community: 'Dev Nexus', date: 'Mar 9, 2025', time: '5:00 PM IST', type: '💻' },
-];
-
 function getGreeting() {
   const h = new Date().getHours();
   if (h < 12) return 'Good morning';
@@ -42,9 +26,9 @@ export default function useDashboard() {
     };
   });
 
-  const [communities, setCommunities] = useState(DEFAULT_COMMUNITIES);
-  const [notifications, setNotifications] = useState(DEFAULT_NOTIFICATIONS);
-  const [events, setEvents] = useState(DEFAULT_EVENTS);
+  const [communities, setCommunities] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [events, setEvents] = useState([]);
   const [stats, setStats] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -80,11 +64,13 @@ export default function useDashboard() {
         dashboardService.getStats(),
       ]);
 
-      if (commsRes.status === 'fulfilled' && Array.isArray(commsRes.value) && commsRes.value.length > 0) {
+      if (commsRes.status === 'fulfilled' && Array.isArray(commsRes.value)) {
         setCommunities(commsRes.value.slice(0, 8));
+      } else {
+        setCommunities([]);
       }
 
-      if (eventsRes.status === 'fulfilled' && Array.isArray(eventsRes.value) && eventsRes.value.length > 0) {
+      if (eventsRes.status === 'fulfilled' && Array.isArray(eventsRes.value)) {
         setEvents(
           eventsRes.value.slice(0, 4).map((e) => ({
             id: e.id,
@@ -97,9 +83,11 @@ export default function useDashboard() {
             type: '📅',
           }))
         );
+      } else {
+        setEvents([]);
       }
 
-      if (notifsRes.status === 'fulfilled' && Array.isArray(notifsRes.value) && notifsRes.value.length > 0) {
+      if (notifsRes.status === 'fulfilled' && Array.isArray(notifsRes.value)) {
         setNotifications(
           notifsRes.value.slice(0, 6).map((n) => ({
             id: n.id,
@@ -111,6 +99,8 @@ export default function useDashboard() {
             read: n.read,
           }))
         );
+      } else {
+        setNotifications([]);
       }
 
       if (statsRes.status === 'fulfilled' && statsRes.value) {

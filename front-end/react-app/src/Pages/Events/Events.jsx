@@ -1,5 +1,5 @@
 // Page container component for Events & Tournaments module.
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import SideBar from '../../Components/SideBar';
 import '../../styles/global.css';
 import '../../styles/events.css';
@@ -9,10 +9,10 @@ import { useRegistrations } from '../../Components/event-management/hooks/useReg
 import { useToast } from '../../Components/event-management/hooks/useToast';
 import {
   CATEGORIES,
-  DEFAULT_COMMUNITIES,
   getCurrentUser,
 } from '../../Components/event-management/utils/constants';
 import { getCommunityObject } from '../../Components/event-management/utils/getCommunityName';
+import { eventService } from '../../Components/event-management/services/eventService';
 
 import PageHeader from '../../Components/event-management/common/PageHeader';
 import Toast from '../../Components/event-management/common/Toast';
@@ -27,6 +27,7 @@ export default function Events() {
   const user = getCurrentUser();
   const [detailEvent, setDetailEvent] = useState(null);
   const [registerEvent, setRegisterEvent] = useState(null);
+  const [communities, setCommunities] = useState([]);
 
   const { toastMsg, showToast } = useToast();
   const {
@@ -37,6 +38,14 @@ export default function Events() {
     deleteEvent,
     updateAttendeeCount,
   } = useEvents();
+
+  useEffect(() => {
+    eventService.getCommunities()
+      .then((data) => {
+        if (Array.isArray(data)) setCommunities(data);
+      })
+      .catch(() => {});
+  }, []);
 
   const { isRegistered, registerForEvent, cancelRegistration } = useRegistrations();
 
@@ -92,7 +101,7 @@ export default function Events() {
           {upcomingEvents.length > 0 && (
             <FeaturedEventBanner
               event={upcomingEvents[0]}
-              comm={getCommunityObject(upcomingEvents[0].communityId, DEFAULT_COMMUNITIES)}
+              comm={getCommunityObject(upcomingEvents[0].communityId, communities)}
               isRegistered={isRegistered(upcomingEvents[0].id)}
               onView={setDetailEvent}
               onRegister={handleOpenRegisterModal}
@@ -109,7 +118,7 @@ export default function Events() {
           <EventsGrid
             events={upcomingEvents}
             loading={eventsLoading}
-            getCommunity={(id) => getCommunityObject(id, DEFAULT_COMMUNITIES)}
+            getCommunity={(id) => getCommunityObject(id, communities)}
             isRegistered={isRegistered}
             onView={setDetailEvent}
             onRegister={handleOpenRegisterModal}

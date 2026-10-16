@@ -4,6 +4,13 @@ import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class MessagesService {
+  findAll(communityId?: number, channelId?: string): ChatMessageRecord[] {
+    return db.messages.filter((item) =>
+      (!communityId || item.communityId === communityId) &&
+      (!channelId || item.channelId === channelId),
+    );
+  }
+
   findByChannel(channelId: string): ChatMessageRecord[] {
     return db.messages.filter((item) => item.channelId === channelId);
   }

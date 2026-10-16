@@ -5,8 +5,17 @@ import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UsersService {
-  findAll(): UserRecord[] {
-    return db.users;
+  findAll(search?: string): UserRecord[] {
+    if (!search || !search.trim()) {
+      return db.users;
+    }
+    const q = search.trim().toLowerCase();
+    return db.users.filter((u) =>
+      u.username?.toLowerCase().includes(q) ||
+      u.email?.toLowerCase().includes(q) ||
+      u.firstName?.toLowerCase().includes(q) ||
+      u.lastName?.toLowerCase().includes(q)
+    );
   }
 
   findOne(id: number): UserRecord {

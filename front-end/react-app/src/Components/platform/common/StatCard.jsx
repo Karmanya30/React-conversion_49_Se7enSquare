@@ -14,7 +14,7 @@ export default function StatCard({ card, onClick }) {
       <div className="stat-info">
         <div className="stat-val">{card.val}</div>
         <div className="stat-label">{card.label}</div>
-        <div className="stat-trend up">{card.trend} this week</div>
+        {card.trend ? <div className="stat-trend up">{card.trend} this week</div> : null}
       </div>
     </div>
   );

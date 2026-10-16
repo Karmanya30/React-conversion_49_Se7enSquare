@@ -1,5 +1,4 @@
 import { useState, useMemo } from 'react';
-import { DEFAULT_USERS } from '../data/adminData';
 
 const API_BASE = 'http://localhost:3000/api';
 
@@ -7,7 +6,7 @@ const API_BASE = 'http://localhost:3000/api';
  * Custom hook managing user directory, role editing, suspensions, and bans.
  */
 export default function useAdminUsers(adminUser, showToast, addAuditLog) {
-  const [users, setUsers] = useState(DEFAULT_USERS);
+  const [users, setUsers] = useState([]);
   const [userSearch, setUserSearch] = useState('');
   const [userRoleFilter, setUserRoleFilter] = useState('all');
   const [editingUser, setEditingUser] = useState(null);

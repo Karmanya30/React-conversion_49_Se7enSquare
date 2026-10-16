@@ -27,32 +27,40 @@ export default function ApplicationsTab({
               </tr>
             </thead>
             <tbody>
-              {organizerApps.map((app) => (
-                <tr key={app.id}>
-                  <td><strong>@{app.user}</strong></td>
-                  <td style={{ fontSize: '13px', color: 'var(--text-secondary,#ccc)' }}>{app.experience}</td>
-                  <td style={{ fontSize: '12px', color: 'var(--text-3,#666)' }}>{app.applied}</td>
-                  <td>
-                    <span className={`admin-badge-status ${app.status}`}>
-                      {app.status.toUpperCase()}
-                    </span>
-                  </td>
-                  <td>
-                    {app.status === 'pending' ? (
-                      <div style={{ display: 'flex', gap: '6px' }}>
-                        <button className="act-btn act-restore" onClick={() => onOrganizerApp(app.id, 'approved')}>
-                          Approve
-                        </button>
-                        <button className="act-btn act-delete" onClick={() => onOrganizerApp(app.id, 'rejected')}>
-                          Reject
-                        </button>
-                      </div>
-                    ) : (
-                      <span style={{ fontSize: '12px', color: 'var(--text-3,#666)' }}>Decision saved</span>
-                    )}
+              {organizerApps.length === 0 ? (
+                <tr>
+                  <td colSpan="5" style={{ textAlign: 'center', padding: '24px', color: 'var(--text-3, #888)' }}>
+                    No organizer applications in queue.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                organizerApps.map((app) => (
+                  <tr key={app.id}>
+                    <td><strong>@{app.user}</strong></td>
+                    <td style={{ fontSize: '13px', color: 'var(--text-secondary,#ccc)' }}>{app.experience}</td>
+                    <td style={{ fontSize: '12px', color: 'var(--text-3,#666)' }}>{app.applied}</td>
+                    <td>
+                      <span className={`admin-badge-status ${app.status}`}>
+                        {app.status.toUpperCase()}
+                      </span>
+                    </td>
+                    <td>
+                      {app.status === 'pending' ? (
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button className="act-btn act-restore" onClick={() => onOrganizerApp(app.id, 'approved')}>
+                            Approve
+                          </button>
+                          <button className="act-btn act-delete" onClick={() => onOrganizerApp(app.id, 'rejected')}>
+                            Reject
+                          </button>
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: '12px', color: 'var(--text-3,#666)' }}>Decision saved</span>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -74,34 +82,42 @@ export default function ApplicationsTab({
               </tr>
             </thead>
             <tbody>
-              {moderatorApps.map((app) => (
-                <tr key={app.id}>
-                  <td><strong>@{app.user}</strong></td>
-                  <td>
-                    <span className="admin-badge-score">{app.quizScore}</span>
-                  </td>
-                  <td style={{ fontSize: '12px', color: 'var(--text-3,#666)' }}>{app.applied}</td>
-                  <td>
-                    <span className={`admin-badge-status ${app.status}`}>
-                      {app.status.toUpperCase()}
-                    </span>
-                  </td>
-                  <td>
-                    {app.status === 'pending' ? (
-                      <div style={{ display: 'flex', gap: '6px' }}>
-                        <button className="act-btn act-restore" onClick={() => onModeratorApp(app.id, 'approved')}>
-                          Approve
-                        </button>
-                        <button className="act-btn act-delete" onClick={() => onModeratorApp(app.id, 'rejected')}>
-                          Reject
-                        </button>
-                      </div>
-                    ) : (
-                      <span style={{ fontSize: '12px', color: 'var(--text-3,#666)' }}>Decision saved</span>
-                    )}
+              {moderatorApps.length === 0 ? (
+                <tr>
+                  <td colSpan="5" style={{ textAlign: 'center', padding: '24px', color: 'var(--text-3, #888)' }}>
+                    No moderator applications in queue.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                moderatorApps.map((app) => (
+                  <tr key={app.id}>
+                    <td><strong>@{app.user}</strong></td>
+                    <td>
+                      <span className="admin-badge-score">{app.quizScore}</span>
+                    </td>
+                    <td style={{ fontSize: '12px', color: 'var(--text-3,#666)' }}>{app.applied}</td>
+                    <td>
+                      <span className={`admin-badge-status ${app.status}`}>
+                        {app.status.toUpperCase()}
+                      </span>
+                    </td>
+                    <td>
+                      {app.status === 'pending' ? (
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button className="act-btn act-restore" onClick={() => onModeratorApp(app.id, 'approved')}>
+                            Approve
+                          </button>
+                          <button className="act-btn act-delete" onClick={() => onModeratorApp(app.id, 'rejected')}>
+                            Reject
+                          </button>
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: '12px', color: 'var(--text-3,#666)' }}>Decision saved</span>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

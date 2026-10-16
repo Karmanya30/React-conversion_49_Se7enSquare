@@ -27,7 +27,7 @@ export const HOW_IT_WORKS_STEPS = [
  * Custom hook managing animations, stats counters, 3D tilt, and interactions for the Landing page.
  */
 export default function useLanding() {
-  // ── 1. Statistics Count-Up Animation State ──
+  // ── 1. Statistics State from Backend ──
   const [stats, setStats] = useState({
     users: '0',
     comms: '0',
@@ -35,39 +35,21 @@ export default function useLanding() {
   });
 
   useEffect(() => {
-    const duration = 2000;
-    const start = performance.now();
-
-    const animate = (now) => {
-      const p = Math.min((now - start) / duration, 1);
-      const ease = 1 - Math.pow(1 - p, 4); // ease-out-quart
-
-      const usersVal = Math.floor(ease * 148000);
-      const commsVal = Math.floor(ease * 3200);
-      const msgsVal = Math.floor(ease * 2400);
-
-      setStats({
-        users: (usersVal / 1000).toFixed(usersVal < 10000 ? 1 : 0) + 'K+',
-        comms: (commsVal / 1000).toFixed(commsVal < 10000 ? 1 : 0) + 'K+',
-        msgs: (msgsVal / 1000).toFixed(msgsVal < 10000 ? 1 : 0) + 'K+',
-      });
-
-      if (p < 1) {
-        requestAnimationFrame(animate);
-      } else {
-        setStats({
-          users: '148K+',
-          comms: '3.2K+',
-          msgs: '2.4M+',
-        });
-      }
-    };
-
-    const timer = setTimeout(() => {
-      requestAnimationFrame(animate);
-    }, 400);
-
-    return () => clearTimeout(timer);
+    fetch('http://localhost:3000/api/dashboard/stats')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) {
+          const u = data.totalUsers || 0;
+          const c = data.totalCommunities || 0;
+          const m = data.totalMessages || 0;
+          setStats({
+            users: u >= 1000 ? `${(u / 1000).toFixed(1)}K+` : String(u),
+            comms: c >= 1000 ? `${(c / 1000).toFixed(1)}K+` : String(c),
+            msgs: m >= 1000 ? `${(m / 1000).toFixed(1)}K+` : String(m),
+          });
+        }
+      })
+      .catch(() => {});
   }, []);
 
   // ── 2. How It Works Step Switching & Auto-Cycling ──

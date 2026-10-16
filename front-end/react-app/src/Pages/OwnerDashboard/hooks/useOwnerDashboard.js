@@ -101,12 +101,11 @@ export default function useOwnerDashboard() {
           else loadError = await apiErrorMessage(commRes);
           users = usersRes.ok ? await usersRes.json() : [];
         } catch {
-          communities = [
-            { id: 1, name: 'FPS Arena', icon: '🎯', memberCount: 1420, category: 'FPS', ownerId: 1 },
-            { id: 2, name: 'Pro Gamers', icon: '⚡', memberCount: 890, category: 'Gaming', ownerId: 2 },
-          ];
+          communities = [];
+          users = [];
+          loadError = 'Failed to fetch communities from server.';
         }
-        setDrillContent({ kind: 'communities', communities, users, loadError });
+        setDrillContent({ kind: 'communities', communities: Array.isArray(communities) ? communities : [], users, loadError });
       } else if (kind === 'events') {
         setDrillTitle('Events Overview');
         let events = [];
@@ -121,13 +120,11 @@ export default function useOwnerDashboard() {
           else loadError = await apiErrorMessage(eventsRes);
           communities = commsRes.ok ? await commsRes.json() : [];
         } catch {
-          events = [
-            { id: 1, title: 'Summer Valorant Cup', type: 'tournament', entryFee: 150, date: '2026-10-15', status: 'approved', communityId: 1 },
-            { id: 2, title: 'Apex Community Scrims', type: 'event', entryFee: 0, date: '2026-10-18', status: 'pending', communityId: 2 },
-          ];
+          events = [];
           communities = [];
+          loadError = 'Failed to fetch events from server.';
         }
-        setDrillContent({ kind: 'events', events, communities, loadError });
+        setDrillContent({ kind: 'events', events: Array.isArray(events) ? events : [], communities, loadError });
       } else if (kind === 'revenue') {
         setDrillTitle('Revenue — All Transactions');
         let payments = [];
@@ -137,10 +134,8 @@ export default function useOwnerDashboard() {
           if (res.ok) payments = await res.json();
           else loadError = await apiErrorMessage(res);
         } catch {
-          payments = [
-            { id: 1, type: 'subscription', amount: 499, description: 'Plus Upgrade', createdAt: new Date().toISOString() },
-            { id: 2, type: 'tournament_fee', amount: 150, description: 'Tournament Registration', createdAt: new Date().toISOString() },
-          ];
+          payments = [];
+          loadError = 'Failed to fetch payment history from server.';
         }
         payments = Array.isArray(payments) ? payments : [];
         setDrillContent({ kind: 'revenue', payments, loadError });
@@ -166,10 +161,8 @@ export default function useOwnerDashboard() {
           if (res.ok) orgs = await res.json();
           else loadError = await apiErrorMessage(res);
         } catch {
-          orgs = [
-            { username: 'champion_org', plan: 'premium', appliedAt: new Date().toISOString() },
-            { username: 'pixel_guild', plan: 'free', appliedAt: new Date().toISOString() },
-          ];
+          orgs = [];
+          loadError = 'Failed to fetch organizers from server.';
         }
         orgs = Array.isArray(orgs) ? orgs : [];
         setDrillContent({ kind: 'organisers', orgs, filter, loadError });

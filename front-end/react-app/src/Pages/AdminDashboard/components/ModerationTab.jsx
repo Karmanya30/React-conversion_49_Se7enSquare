@@ -4,16 +4,17 @@ import React from 'react';
  * Flagged content queue cards with resolution actions.
  */
 export default function ModerationTab({ reports, onModerationAction }) {
-  const modQueue = reports.length > 0 ? reports : [
-    { id: 1, reason: 'Hate speech detected in chat', community: 'Pro Gamers', severity: 'high', content: 'Inappropriate slur used in match' },
-    { id: 2, reason: 'Repeated spam / invite links', community: 'Dev Nexus', severity: 'medium', content: 'discord.gg/scamlink posted 14 times' },
-    { id: 3, reason: 'Impersonation of moderator', community: 'Speedrunners', severity: 'critical', content: 'Display name cloned staff account' },
-  ];
+  const modQueue = reports || [];
 
   return (
     <div className="admin-page active" id="page-moderation">
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        {modQueue.map((item) => (
+        {modQueue.length === 0 ? (
+          <div className="card" style={{ textAlign: 'center', padding: '36px', color: 'var(--text-3, #888)' }}>
+            🛡️ No open reports in queue. The moderation queue is clean!
+          </div>
+        ) : (
+          modQueue.map((item) => (
           <div
             key={item.id}
             className="card"
@@ -62,7 +63,7 @@ export default function ModerationTab({ reports, onModerationAction }) {
               </button>
             </div>
           </div>
-        ))}
+        )))}
       </div>
     </div>
   );

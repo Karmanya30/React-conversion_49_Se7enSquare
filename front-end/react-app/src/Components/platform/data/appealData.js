@@ -8,21 +8,8 @@ export const APPEAL_TYPES = [
   { id: 'other',             label: 'Other Reason',       desc: 'My appeal reason is not covered by the options above.' },
 ];
 
-export const ACTION_DETAILS = [
-  { key: 'Action Type', val: 'Temporary Ban (7 Days)',                                                               cls: 'red' },
-  { key: 'Issued By',   val: 'Rahul Kumar (Moderator)' },
-  { key: 'Date Issued', val: 'March 3, 2025 · 4:17 PM IST' },
-  { key: 'Expires',     val: 'March 10, 2025 · 4:17 PM IST',                                                         cls: 'gold' },
-  { key: 'Reason Given',val: 'Repeated harassment and violation of community conduct rules after two prior warnings.' },
-  { key: 'Action ID',   val: 'ACT-DNX-2025-003847',                                                                  cls: 'mono' },
-];
-
-export const TIMELINE_EVENTS = [
-  { dot: 'tl-past',   icon: '⚠️', event: '1st Warning issued',        time: 'Feb 18, 2025 · Off-topic spam in #general' },
-  { dot: 'tl-past',   icon: '🔇', event: '2nd Warning + 1h mute',     time: 'Feb 28, 2025 · Inappropriate language in #dev-talk' },
-  { dot: 'tl-now',    icon: '🚫', event: 'Temporary Ban (7 days)',     time: 'March 3, 2025 · Persistent harassment' },
-  { dot: 'tl-future', icon: '🔓', event: 'Ban Expiry',                 time: 'March 10, 2025 at 4:17 PM IST' },
-];
+export const ACTION_DETAILS = [];
+export const TIMELINE_EVENTS = [];
 
 export const NEXT_STEPS = [
   { icon: '📥', label: 'Appeal received',    desc: 'Your appeal is logged and queued for review.' },

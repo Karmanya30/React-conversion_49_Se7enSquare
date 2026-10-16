@@ -94,33 +94,41 @@ export default function AdminDashboard() {
   useEffect(() => {
     async function fetchAll() {
       try {
-        const [usersRes, commsRes, reportsRes, eventsRes, appealsRes] = await Promise.all([
+        const [usersRes, commsRes, reportsRes, eventsRes, appealsRes, statsRes] = await Promise.all([
           fetch(`${API_BASE}/users`, { headers: { 'x-role': adminUser.role } }),
           fetch(`${API_BASE}/communities`, { headers: { 'x-role': adminUser.role } }),
           fetch(`${API_BASE}/reports`, { headers: { 'x-role': adminUser.role } }),
           fetch(`${API_BASE}/events`, { headers: { 'x-role': adminUser.role } }),
           fetch(`${API_BASE}/appeals`, { headers: { 'x-role': adminUser.role } }),
+          fetch(`${API_BASE}/dashboard/stats`, { headers: { 'x-role': adminUser.role } }),
         ]);
-        if (usersRes.ok) { const d = await usersRes.json(); if (Array.isArray(d) && d.length > 0) setUsers(d); }
-        if (commsRes.ok) { const d = await commsRes.json(); if (Array.isArray(d)) setCommunities(d); }
-        if (reportsRes.ok) { const d = await reportsRes.json(); if (Array.isArray(d)) setReports(d); }
-        if (eventsRes.ok) { const d = await eventsRes.json(); if (Array.isArray(d)) setEvents(d); }
-        if (appealsRes.ok) { const d = await appealsRes.json(); if (Array.isArray(d)) setAppeals(d); }
+        if (usersRes.ok) { const d = await usersRes.json(); setUsers(Array.isArray(d) ? d : []); }
+        if (commsRes.ok) { const d = await commsRes.json(); setCommunities(Array.isArray(d) ? d : []); }
+        if (reportsRes.ok) { const d = await reportsRes.json(); setReports(Array.isArray(d) ? d : []); }
+        if (eventsRes.ok) { const d = await eventsRes.json(); setEvents(Array.isArray(d) ? d : []); }
+        if (appealsRes.ok) { const d = await appealsRes.json(); setAppeals(Array.isArray(d) ? d : []); }
+        if (statsRes.ok) {
+          const s = await statsRes.json();
+          setStats((prev) => ({
+            ...prev,
+            messages: s.totalMessages || 0,
+          }));
+        }
       } catch {}
     }
     fetchAll();
   }, [adminUser.role, setUsers, setCommunities, setReports, setEvents, setAppeals]);
 
-  // Recalculate platform overview stats
+  // Recalculate platform overview stats based on actual data
   useEffect(() => {
-    setStats({
+    setStats((prev) => ({
       users: users.length,
-      comms: communities.length || 3,
-      reports: reports.filter((r) => r.status === 'pending').length || 1,
-      events: events.filter((e) => e.status === 'approved').length || 2,
-      appeals: appeals.filter((a) => a.status === 'pending').length || 1,
-      messages: 48000,
-    });
+      comms: communities.length,
+      reports: reports.filter((r) => r.status === 'pending').length,
+      events: events.filter((e) => e.status === 'approved').length,
+      appeals: appeals.filter((a) => a.status === 'pending').length,
+      messages: prev.messages || 0,
+    }));
   }, [users, communities, reports, events, appeals]);
 
   const currentPage = PAGES.find((p) => p.id === activePage);

@@ -21,4 +21,7 @@ export class DashboardStatsDto {
 
   @ApiProperty({ example: 4 })
   totalMemberships!: number;
+
+  @ApiProperty({ example: 12 })
+  totalMessages!: number;
 }

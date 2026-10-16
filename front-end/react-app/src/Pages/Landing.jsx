@@ -49,7 +49,7 @@ export default function Landing() {
           <div className="hero-l">
             <div className="hero-eyebrow">
               <div className="ey-dot"></div>
-              Now in public beta · 148K+ members
+              Now in public beta{stats.users && stats.users !== '0' ? ` · ${stats.users} members` : ''}
             </div>
 
             <h1 className="hero-h1">
@@ -203,7 +203,9 @@ export default function Landing() {
       ═══════════════════════════════════════ */}
       <div className="logos">
         <div className="logos-inner">
-          <span className="logos-label">Trusted by 3,200+ active communities worldwide</span>
+          <span className="logos-label">
+            {stats.comms && stats.comms !== '0' ? `Connecting ${stats.comms} active communities` : 'Connecting gaming communities worldwide'}
+          </span>
           <div className="logos-track-wrap">
             <div className="logos-track">
               <div className="logo-chip">⚡ Dev Nexus</div>
@@ -437,7 +439,7 @@ export default function Landing() {
                 >
                   Discover Communities
                   <span style={{ fontSize: '11px', color: 'var(--t3)', fontFamily: "'DM Sans', sans-serif" }}>
-                    3,247 total
+                    {stats.comms && stats.comms !== '0' ? `${stats.comms} total` : 'Active'}
                   </span>
                 </div>
 

@@ -1,24 +1,24 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { DEFAULT_CHANNELS, DEMO_MESSAGES, EMOJIS } from '../data/chatData';
+import { DEFAULT_CHANNELS, EMOJIS } from '../data/chatData';
 
 const API_BASE = 'http://localhost:3000/api';
 
 function getUser() {
   try {
     const raw = JSON.parse(localStorage.getItem('nexus_user') || localStorage.getItem('currentUser') || '{}');
-    const name = raw.fullName || raw.name || (raw.firstName ? `${raw.firstName} ${raw.lastName || ''}`.trim() : 'Rahul Kumar');
+    const name = raw.fullName || raw.name || (raw.firstName ? `${raw.firstName} ${raw.lastName || ''}`.trim() : raw.username || 'User');
     return {
       id: raw.id || 1,
       name,
       fullName: name,
-      firstName: raw.firstName || 'Rahul',
-      username: raw.username || 'rahul',
-      initials: raw.initials || 'AK',
-      role: raw.role || 'admin',
+      firstName: raw.firstName || raw.username || 'User',
+      username: raw.username || 'user',
+      initials: (raw.firstName ? raw.firstName.slice(0, 1) + (raw.lastName ? raw.lastName.slice(0, 1) : '') : (name || 'U')).slice(0, 2).toUpperCase(),
+      role: raw.role || 'user',
     };
   } catch {
-    return { id: 1, name: 'Rahul Kumar', fullName: 'Rahul Kumar', firstName: 'Rahul', username: 'rahul', initials: 'AK', role: 'admin' };
+    return { id: 1, name: 'User', fullName: 'User', firstName: 'User', username: 'user', initials: 'U', role: 'user' };
   }
 }
 
@@ -31,7 +31,7 @@ export default function useChat() {
   const [searchParams] = useSearchParams();
 
   const communityId    = searchParams.get('community') || '';
-  const communityName  = decodeURIComponent(searchParams.get('cname')   || 'FPS Arena');
+  const communityName  = decodeURIComponent(searchParams.get('cname')   || 'Community Chat');
   const initialChannel = decodeURIComponent(searchParams.get('channel') || 'general');
 
   const messagesEndRef = useRef(null);
@@ -41,7 +41,8 @@ export default function useChat() {
   const [activeChannel,   setActiveChannel]   = useState(
     () => DEFAULT_CHANNELS.find(c => c.name === initialChannel) || DEFAULT_CHANNELS[0]
   );
-  const [messages,        setMessages]        = useState(DEMO_MESSAGES);
+  const [messages,        setMessages]        = useState([]);
+  const [members,         setMembers]         = useState([]);
   const [msgInput,        setMsgInput]        = useState('');
   const [channelSearch,   setChannelSearch]   = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -87,6 +88,41 @@ export default function useChat() {
     fetchChannels();
   }, [communityId, user.role, initialChannel]);
 
+  // Fetch community members
+  useEffect(() => {
+    async function fetchMembers() {
+      if (!communityId) {
+        setMembers([]);
+        return;
+      }
+      try {
+        const [memRes, usersRes] = await Promise.all([
+          fetch(`${API_BASE}/memberships?communityId=${communityId}`, { headers: { 'x-role': user.role } }),
+          fetch(`${API_BASE}/users`, { headers: { 'x-role': user.role } }),
+        ]);
+        if (memRes.ok && usersRes.ok) {
+          const mems = await memRes.json();
+          const usrs = await usersRes.json();
+          const userMap = new Map((Array.isArray(usrs) ? usrs : []).map(u => [String(u.id), u]));
+          const mappedMembers = (Array.isArray(mems) ? mems : []).map(m => {
+            const u = userMap.get(String(m.userId)) || {};
+            const mName = u.fullName || u.username || `User #${m.userId}`;
+            return {
+              name: mName,
+              role: u.role || 'Member',
+              initials: mName.slice(0, 2).toUpperCase(),
+              color: '#6366f1',
+            };
+          });
+          setMembers(mappedMembers);
+        }
+      } catch {
+        setMembers([]);
+      }
+    }
+    fetchMembers();
+  }, [communityId, user.role]);
+
   // Fetch messages for the active channel
   useEffect(() => {
     async function fetchMessages() {
@@ -97,7 +133,7 @@ export default function useChat() {
         });
         if (res.ok) {
           const data = await res.json();
-          if (Array.isArray(data) && data.length > 0) {
+          if (Array.isArray(data)) {
             setMessages(data.map(m => {
               const reactionsArr = [];
               if (m.reactions && typeof m.reactions === 'object') {
@@ -118,9 +154,15 @@ export default function useChat() {
                 reactions: reactionsArr,
               };
             }));
+          } else {
+            setMessages([]);
           }
+        } else {
+          setMessages([]);
         }
-      } catch {}
+      } catch {
+        setMessages([]);
+      }
     }
     fetchMessages();
   }, [activeChannel?.id, user.role]);
@@ -215,6 +257,7 @@ export default function useChat() {
     filteredChannels,
     // Message state
     messages, filteredMessages,
+    members,
     msgInput, setMsgInput,
     msgSearchQuery, setMsgSearchQuery,
     replyTo, setReplyTo,

@@ -11,16 +11,17 @@ const API_BASE = 'http://localhost:3000/api';
 function getStoredUser() {
   try {
     const raw = JSON.parse(localStorage.getItem('nexus_user') || localStorage.getItem('currentUser') || '{}');
+    const uName = raw.username || raw.handle || 'user';
     return {
       id:        raw.id        || 1,
-      firstName: raw.firstName || 'User',
+      firstName: raw.firstName || (uName ? uName.charAt(0).toUpperCase() + uName.slice(1) : 'User'),
       lastName:  raw.lastName  || '',
       fullName:  raw.fullName  || raw.name || `${raw.firstName || 'User'} ${raw.lastName || ''}`.trim(),
-      username:  raw.username  || raw.handle || 'user',
-      handle:    raw.handle    || raw.username || 'user',
-      email:     raw.email     || 'user@gameunity.com',
-      phone:     raw.phone     || '+91 98765 43210',
-      bio:       raw.bio       || 'Passionate gamer and community builder.',
+      username:  uName,
+      handle:    raw.handle    || uName,
+      email:     raw.email     || '',
+      phone:     raw.phone     || '',
+      bio:       raw.bio       || '',
       avatar:    raw.avatar    || null,
       role:      raw.role      || 'user',
       plan:      raw.plan      || 'free',
@@ -29,7 +30,7 @@ function getStoredUser() {
   } catch {
     return {
       id: 1, firstName: 'User', lastName: '', fullName: 'User',
-      username: 'user', handle: 'user', email: 'user@gameunity.com',
+      username: 'user', handle: 'user', email: '',
       phone: '', bio: '', avatar: null, role: 'user', plan: 'free', status: 'Online',
     };
   }
@@ -157,7 +158,7 @@ export default function useProfileSettings() {
       });
       showToast('🏆 Organizer application submitted for admin review!');
     } catch {
-      showToast('🏆 Organizer application submitted!');
+      showToast('⚠️ Could not submit organizer application');
     }
   };
 

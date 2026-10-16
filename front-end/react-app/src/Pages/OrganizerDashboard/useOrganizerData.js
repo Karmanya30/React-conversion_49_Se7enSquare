@@ -10,10 +10,7 @@ import {
   EVENT_STATUSES,
 } from '../../Components/event-management/utils/constants';
 
-const DEFAULT_COMMUNITIES = [
-  { id: 1, name: 'FPS Arena', slug: 'fps-arena' },
-  { id: 2, name: 'Pro Gamers', slug: 'pro-gamers' },
-];
+
 
 export function useOrganizerData() {
   const currentUser = getCurrentUser();
@@ -72,8 +69,8 @@ export function useOrganizerData() {
       }
     }
 
-    if (!commsData || commsData.length === 0) {
-      commsData = DEFAULT_COMMUNITIES;
+    if (!commsData || !Array.isArray(commsData)) {
+      commsData = [];
     }
     setAllCommunities(commsData);
 
@@ -147,12 +144,7 @@ export function useOrganizerData() {
         limits: { maxActiveTournaments: 'Unlimited', maxParticipants: 'Unlimited' },
       }));
     } catch {
-      showToast('🏆 Upgraded to Premium Organizer (simulated)');
-      setOrganizerProfile((prev) => ({
-        ...prev,
-        plan: 'premium',
-        limits: { maxActiveTournaments: 'Unlimited', maxParticipants: 'Unlimited' },
-      }));
+      showToast('⚠️ Could not upgrade plan');
     }
   };
 
@@ -176,7 +168,7 @@ export function useOrganizerData() {
         showToast('⚠️ Could not promote event');
       }
     } catch {
-      showToast('📣 Promoted to the Discover carousel for 7 days');
+      showToast('⚠️ Could not promote event');
     }
   };
 

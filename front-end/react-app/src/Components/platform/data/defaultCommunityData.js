@@ -6,18 +6,14 @@ export const DEFAULT_COMMUNITY = {
   description: 'Competitive esports community and tournaments.',
   banner: '',
   rules: "Be respectful to other members\nStay on topic in each channel\nNo spam or self-promotion",
-  members: [
-    { id: 1, name: 'Sanidhya Joshi', handle: '@sanidhya', role: 'Owner', initials: 'SJ' },
-    { id: 2, name: 'Awadhesh', handle: '@awadhesh', role: 'Moderator', initials: 'AW' },
-    { id: 3, name: 'Karmanya', handle: '@karmanya', role: 'Member', initials: 'KM' },
-  ],
+  members: [],
   channels: [
     { id: 1, name: 'announcements', type: 'Announcement' },
     { id: 2, name: 'general', type: 'Text' },
     { id: 3, name: 'voice-lounge', type: 'Voice' },
   ],
-  memberCount: 124,
-  onlineCount: 42,
+  memberCount: 0,
+  onlineCount: 0,
 };
 
 export const SETTINGS_TABS = [

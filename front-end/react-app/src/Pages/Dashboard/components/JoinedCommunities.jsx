@@ -23,6 +23,11 @@ export default function JoinedCommunities({ communities, loading, navigate }) {
         </div>
       ) : (
         <div className="communities-scroll">
+          {communities.length === 0 && (
+            <div style={{ color: 'var(--text-3,#888)', fontSize: '13px', display: 'flex', alignItems: 'center', padding: '0 12px' }}>
+              No joined communities yet. Explore communities in Discovery!
+            </div>
+          )}
           {communities.map((comm) => (
             <div
               key={comm.id}

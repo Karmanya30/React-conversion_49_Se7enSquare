@@ -1,10 +1,10 @@
-// Custom hook for managing the event creation form, validations, drafts, and image upload.
-import { useState, useRef } from 'react';
-import { DEFAULT_COMMUNITIES } from '../../Components/event-management/utils/constants';
+import { useState, useRef, useEffect } from 'react';
 import { getCommunityObject } from '../../Components/event-management/utils/getCommunityName';
+import { eventService } from '../../Components/event-management/services/eventService';
 
 export function useCreateEventForm({ submitEvent, showToast, saveDraft, loadDraft, onSuccess }) {
   const fileInputRef = useRef(null);
+  const [communities, setCommunities] = useState([]);
   const [eventType, setEventType] = useState('Online');
   const [coverPreview, setCoverPreview] = useState(null);
   const [draftSaved, setDraftSaved] = useState(false);
@@ -18,6 +18,14 @@ export function useCreateEventForm({ submitEvent, showToast, saveDraft, loadDraf
     capacity: 50,
     category: 'Tournament',
   });
+
+  useEffect(() => {
+    eventService.getCommunities()
+      .then((data) => {
+        if (Array.isArray(data)) setCommunities(data);
+      })
+      .catch(() => {});
+  }, []);
 
   const handleImageUpload = (e) => {
     const file = e.target.files?.[0];
@@ -61,7 +69,7 @@ export function useCreateEventForm({ submitEvent, showToast, saveDraft, loadDraf
     }
     setFormErrors({});
 
-    const comm = getCommunityObject(form.community, DEFAULT_COMMUNITIES);
+    const comm = getCommunityObject(form.community, communities);
     const res = await submitEvent({
       title: form.title,
       description: form.description,

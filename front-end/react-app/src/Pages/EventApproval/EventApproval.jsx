@@ -16,10 +16,6 @@ import Toast from '../../Components/event-management/common/Toast';
 import SummaryBar from './SummaryBar';
 import ApprovalList from './ApprovalList';
 import EventDetailModal from './EventDetailModal';
-import {
-  DEFAULT_APPROVAL_EVENTS,
-  DEFAULT_APPROVAL_COMMUNITIES,
-} from './approvalDefaults';
 
 export default function EventApproval() {
   const navigate = useNavigate();
@@ -53,16 +49,8 @@ export default function EventApproval() {
       if (stored.length > 0) evList = stored;
     }
 
-    if (!evList || evList.length === 0) {
-      evList = DEFAULT_APPROVAL_EVENTS;
-    }
-
-    if (!commList || commList.length === 0) {
-      commList = DEFAULT_APPROVAL_COMMUNITIES;
-    }
-
-    setEvents(evList);
-    setCommunities(commList);
+    setEvents(Array.isArray(evList) ? evList : []);
+    setCommunities(Array.isArray(commList) ? commList : []);
     setLoading(false);
   }, [getStoredItems]);
 

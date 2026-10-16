@@ -56,19 +56,27 @@ export default function useDashboard() {
     setLoading(true);
     setError(null);
     try {
-      const currentUser = authService.getCurrentUser() || user;
-      setUser({
-        id: currentUser.id || 4,
-        firstName: currentUser.firstName || currentUser.username || 'User',
-        lastName: currentUser.lastName || '',
-        username: currentUser.username || 'player01',
-        role: currentUser.role || 'user',
-      });
+      const currentUser = authService.getCurrentUser();
+      if (currentUser) {
+        setUser((prev) => {
+          if (prev.id === currentUser.id && prev.username === currentUser.username && prev.role === currentUser.role) {
+            return prev;
+          }
+          return {
+            id: currentUser.id || 4,
+            firstName: currentUser.firstName || currentUser.username || 'User',
+            lastName: currentUser.lastName || '',
+            username: currentUser.username || 'player01',
+            role: currentUser.role || 'user',
+          };
+        });
+      }
 
+      const currentId = currentUser?.id || 4;
       const [commsRes, eventsRes, notifsRes, statsRes] = await Promise.allSettled([
         dashboardService.getCommunities(),
         dashboardService.getEvents(),
-        dashboardService.getNotifications(currentUser.id || 4),
+        dashboardService.getNotifications(currentId),
         dashboardService.getStats(),
       ]);
 
@@ -113,7 +121,7 @@ export default function useDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, []);
 
   useEffect(() => {
     fetchData();

@@ -1,5 +1,5 @@
 /**
- * Gameunity — Central API Client Module
+ * Se7enSquare - Central API Client Module
  * Provides unified request configuration, headers, and authentication role injection.
  */
 

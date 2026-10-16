@@ -281,6 +281,7 @@ export default function useAuthForm() {
     setShowLoginPassword,
     loginLoading,
     loginErrors,
+    setLoginErrors,
     handleLoginSubmit,
     personas: PERSONAS,
     handleQuickLogin,
@@ -305,6 +306,7 @@ export default function useAuthForm() {
     setShowRegConfirm,
     regLoading,
     regErrors,
+    setRegErrors,
     strength,
     handleRegisterSubmit,
     // Forgot password

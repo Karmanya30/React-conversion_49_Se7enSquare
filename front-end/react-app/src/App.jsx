@@ -9,9 +9,9 @@ import Pricing from './Pages/Pricing';
 import Dashboard from './Pages/Dashboard';
 import Chat from './Pages/Chat';
 import Discovery from './Pages/Discovery';
-import Events from './Pages/Events';
-import EventApproval from './Pages/EventApproval';
-import EventRegistrants from './Pages/EventRegistrants';
+import Events from './Pages/Events/Events';
+import EventApproval from './Pages/EventApproval/EventApproval';
+import EventRegistrants from './Pages/EventRegistrants/EventRegistrants';
 import CreateCommunity from './Pages/CreateCommunity';
 import CommunityPage from './Pages/CommunityPage';
 import CommunitySettings from './Pages/CommunitySettings';
@@ -19,7 +19,7 @@ import Report from './Pages/Report';
 import Appeal from './Pages/Appeal';
 import ModPanel from './Pages/ModPanel';
 import AdminDashboard from './Pages/AdminDashboard';
-import OrganizerDashboard from './Pages/OrganizerDashboard';
+import OrganizerDashboard from './Pages/OrganizerDashboard/OrganizerDashboard';
 import OwnerDashboard from './Pages/OwnerDashboard';
 import ProfileSettings from './Pages/ProfileSettings';
 import User from './Pages/User';
@@ -132,11 +132,11 @@ export default function App() {
       />
       <Route
         path="/event-approval"
-        element={<ProtectedRoute allowedRoles={['community_manager', 'admin']}><EventApproval /></ProtectedRoute>}
+        element={<ProtectedRoute allowedRoles={['community_manager', 'manager', 'admin']}><EventApproval /></ProtectedRoute>}
       />
       <Route
         path="/event-approval.html"
-        element={<ProtectedRoute allowedRoles={['community_manager', 'admin']}><EventApproval /></ProtectedRoute>}
+        element={<ProtectedRoute allowedRoles={['community_manager', 'manager', 'admin']}><EventApproval /></ProtectedRoute>}
       />
 
       {/* Fallback */}

@@ -160,7 +160,7 @@ export default function useCommunityPage(id, navigate) {
       try {
         const [memsRes, usersRes] = await Promise.all([
           fetch(`${API_BASE}/memberships?communityId=${community.id}`, { headers: { 'x-role': user.role } }),
-          fetch(`${API_BASE}/users`, { headers: { 'x-role': user.role } }),
+          fetch(`${API_BASE}/users?communityId=${community.id}`, { headers: { 'x-role': user.role } }),
         ]);
         if (cancelled) return;
         const mems = memsRes.ok ? await memsRes.json() : [];
@@ -172,8 +172,10 @@ export default function useCommunityPage(id, navigate) {
           const isMod = !isOwner && (u?.role === 'moderator' || u?.role === 'community_manager');
           return {
             userId: m.userId,
-            name: u ? (u.username || u.email) : `User #${m.userId}`,
+            name: u ? (u.fullName || u.username) : `User #${m.userId}`,
+            avatar: u?.avatar,
             role: isOwner ? 'owner' : (isMod ? 'moderator' : 'member'),
+            status: u?.status || 'active',
           };
         }));
       } catch {

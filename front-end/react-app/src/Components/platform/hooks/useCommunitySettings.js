@@ -51,7 +51,7 @@ export default function useCommunitySettings() {
         const [commRes, memsRes, usersRes] = await Promise.all([
           fetch(`${API_BASE}/communities/${communityId}`, { headers: { 'x-role': getRole() } }),
           fetch(`${API_BASE}/memberships?communityId=${communityId}`, { headers: { 'x-role': getRole() } }),
-          fetch(`${API_BASE}/users`, { headers: { 'x-role': getRole() } }),
+          fetch(`${API_BASE}/users?communityId=${communityId}`, { headers: { 'x-role': getRole() } }),
         ]);
         if (commRes.ok) {
           const data = await commRes.json();

@@ -42,10 +42,17 @@ export default function CommunityMembersList({
                   {groupMembers.map(m => (
                     <div key={`${roleGroup}-${m.userId}`} className="member-row" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 0', borderBottom: '1px solid var(--border,rgba(255,255,255,0.04))' }}>
                       <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: m.role === 'owner' ? '#f59e0b' : m.role === 'moderator' ? '#6366f1' : '#374151', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '12px', flexShrink: 0 }}>
-                        {initialsFromName(m.name)}
+                        {m.avatar ? <img src={m.avatar} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} /> : initialsFromName(m.name)}
                       </div>
                       <div>
-                        <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text-1,#fff)' }}>{m.name}</div>
+                        <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text-1,#fff)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          {m.name}
+                          {m.status && m.status !== 'active' && (
+                            <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', background: m.status === 'banned' ? '#ef4444' : '#f59e0b', color: '#fff', textTransform: 'uppercase', fontWeight: 700 }}>
+                              {m.status}
+                            </span>
+                          )}
+                        </div>
                         <div style={{ fontSize: '12px', color: 'var(--text-3,#666)' }}>Member #{m.userId}</div>
                       </div>
                       <div style={{ marginLeft: 'auto' }}>

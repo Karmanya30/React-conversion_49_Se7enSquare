@@ -1,9 +1,10 @@
-import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { OAuth2Client } from 'google-auth-library';
 import { db, nextId, saveDb, UserRecord, hashPassword, verifyPassword } from '../../common/utils/in-memory-db';
 import { sanitizeUser, SanitizedUser } from '../../common/utils/sanitize-user';
 import { AppRole } from '../rbac/role.enum';
 import { GoogleAuthDto } from './dto/google-auth.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 interface RegisterPayload {
   username: string;
@@ -33,6 +34,22 @@ interface VerifiedGoogleProfile {
 @Injectable()
 export class AuthService {
   private readonly oauthClient = new OAuth2Client();
+
+  changePassword(userId: number, payload: ChangePasswordDto) {
+    const user = db.users.find(u => u.id === userId);
+    if (!user) throw new UnauthorizedException('Sign in to change your password');
+    if (payload.new !== payload.confirm) throw new BadRequestException('confirm: passwords do not match');
+    if (user.passwordHash && (!payload.current || !verifyPassword(payload.current, user.passwordHash))) {
+      throw new BadRequestException('current: incorrect password');
+    }
+    if (user.passwordHash && verifyPassword(payload.new, user.passwordHash)) {
+      throw new BadRequestException('new: choose a password different from your current password');
+    }
+    user.passwordHash = hashPassword(payload.new);
+    delete user.password;
+    saveDb();
+    return { ...sanitizeUser(user), hasPassword: true };
+  }
 
   register(payload: RegisterPayload): SanitizedUser {
     const exists = db.users.some(
@@ -74,7 +91,7 @@ export class AuthService {
 
     const isValid = user.passwordHash
       ? verifyPassword(payload.password, user.passwordHash)
-      : (user.password || 'Demo@123') === payload.password;
+      : false;
 
     if (!isValid) {
       throw new UnauthorizedException('Invalid credentials');
@@ -82,6 +99,15 @@ export class AuthService {
 
     if (payload.role && user.role !== payload.role) {
       throw new UnauthorizedException('Invalid role for this account');
+    }
+
+    if (user.status === 'suspended' || user.status === 'banned') {
+      throw new ForbiddenException({
+        code: user.status === 'banned' ? 'ACCOUNT_BANNED' : 'ACCOUNT_SUSPENDED',
+        message: `Account is ${user.status}`,
+        reason: user.statusReason || `Your account has been ${user.status}.`,
+        until: user.statusUntil || null,
+      });
     }
 
     return sanitizeUser(user);

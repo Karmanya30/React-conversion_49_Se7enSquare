@@ -25,14 +25,30 @@ export default function ChatMembersList({ members = [], onHide }) {
           </div>
         ) : (
           members.map(m => (
-            <div key={m.name} className="mem-row">
+            <div key={m.userId} className="mem-row">
               <div className="m-av" style={{ background: m.color || '#6366f1' }}>
-                {m.initials || m.name.split(' ').map(p => p[0]).join('').slice(0, 2)}
-                <span className="m-stat" style={{ background: '#10b981' }} />
+                {m.avatar ? <img src={m.avatar} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} /> : (m.initials || m.name.slice(0, 2))}
               </div>
               <div className="m-info">
                 <div className="m-name">{m.name}</div>
-                <span className={`m-role-tag ${String(m.role || 'user').toLowerCase()}-c`}>{m.role || 'Member'}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span className={`m-role-tag ${String(m.role || 'user').toLowerCase()}-c`}>{m.role || 'Member'}</span>
+                  {m.status && m.status !== 'active' && (
+                    <span
+                      style={{
+                        fontSize: '9px',
+                        padding: '1px 5px',
+                        borderRadius: '3px',
+                        background: m.status === 'banned' ? '#ef4444' : '#f59e0b',
+                        color: '#fff',
+                        textTransform: 'uppercase',
+                        fontWeight: 700,
+                      }}
+                    >
+                      {m.status}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           ))

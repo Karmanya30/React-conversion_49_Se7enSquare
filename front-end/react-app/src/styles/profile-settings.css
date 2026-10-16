@@ -492,42 +492,6 @@ textarea {
   min-height: 100px;
 }
 
-/* Status Badges */
-.badge-row {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.status-badge {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  background: var(--bg-input);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.status-badge:hover {
-  background: var(--bg-hover);
-}
-
-.status-badge.on {
-  border-color: var(--accent);
-  background: rgba(91, 110, 245, 0.05);
-}
-
-.status-badge .dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-}
-
 /* Toggles */
 .toggle-row {
   display: flex;
@@ -580,46 +544,6 @@ textarea {
 
 .toggle.on::after {
   transform: translateX(20px);
-}
-
-/* Theme Grid */
-.theme-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 16px;
-}
-
-.theme-opt {
-  background: var(--bg-input);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 12px;
-  cursor: pointer;
-  transition: all 0.15s;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.theme-opt:hover {
-  border-color: var(--accent);
-}
-
-.theme-opt.on {
-  border-color: var(--accent);
-  background: rgba(91, 110, 245, 0.05);
-}
-
-.theme-swatch {
-  height: 80px;
-  border-radius: 8px;
-  border: 1px solid var(--border-2);
-}
-
-.theme-label {
-  font-size: 13px;
-  font-weight: 600;
-  text-align: center;
 }
 
 /* Danger Zone */
@@ -885,3 +809,7 @@ textarea {
     flex-wrap: wrap;
   }
 }
+
+.profile-fields { border: 0; padding: 0; margin: 0; min-width: 0; }
+.profile-error { color: #f87171; padding: 12px; border: 1px solid currentColor; border-radius: 8px; margin-bottom: 16px; }
+.profile-fields .field { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }

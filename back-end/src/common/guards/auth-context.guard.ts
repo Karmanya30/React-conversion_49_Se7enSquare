@@ -26,8 +26,7 @@ export class AuthContextGuard implements CanActivate {
 
     // Auth endpoints and Swagger docs are inherently public
     const isAuthOrDoc =
-      cleanUrl.startsWith('/api/auth') ||
-      cleanUrl.startsWith('/auth') ||
+      ['/api/auth/login', '/api/auth/register', '/api/auth/google', '/auth/login', '/auth/register', '/auth/google'].includes(cleanUrl) ||
       cleanUrl.startsWith('/api/docs') ||
       cleanUrl.startsWith('/uploads');
 

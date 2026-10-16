@@ -111,6 +111,7 @@ export interface ReportRecord {
   reason: string;
   status: ReportStatus;
   escalatedTo?: string;
+  resolutionNote?: string;
 }
 
 export interface EventRegistrationRecord {
@@ -212,6 +213,12 @@ export interface OrganiserRecord {
   status: OrganiserStatus;
   plan: OrganiserPlan;
   experienceNote?: string;
+  games?: string;
+  organisations?: string;
+  pastEventLinks?: string[];
+  expectedTournamentSize?: number;
+  rulesAgreement?: boolean;
+  rejectionReason?: string;
   appliedAt: string;
   verifiedAt?: string;
 }
@@ -243,6 +250,10 @@ export interface ModeratorApplicationRecord {
   userId: number;
   status: ModeratorApplicationStatus;
   quizScore: number;
+  passMark?: number;
+  answers?: number[];
+  statement?: { why: string; timeZone: string; weeklyHours: number };
+  rejectionReason?: string;
   appliedAt: string;
   certifiedAt?: string;
 }
@@ -321,7 +332,7 @@ export const MIGRATIONS: MigrationFn[] = [
         if (!u.status) u.status = 'active';
         if (!u.createdAt) u.createdAt = '2026-01-01T00:00:00.000Z';
         if (!u.privacy) u.privacy = { showActivity: true, allowDMs: true };
-        if (!u.passwordHash) {
+        if (!u.passwordHash && u.authProvider !== 'google') {
           u.passwordHash = hashPassword(u.password || 'Demo@123');
         }
         delete u.password;

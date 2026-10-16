@@ -1,8 +1,7 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsIn } from 'class-validator';
-
+import { IsIn, IsOptional, IsString, Length } from 'class-validator';
 export class UpdateOrganiserStatusDto {
-  @ApiProperty({ example: 'verified', enum: ['verified', 'rejected'] })
   @IsIn(['verified', 'rejected'])
   status!: 'verified' | 'rejected';
+  @IsOptional() @IsString() @Length(5, 500)
+  rejectionReason?: string;
 }

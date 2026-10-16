@@ -4,7 +4,7 @@ import React from 'react';
  * Top bar — brand, page label, Discard / Save buttons, avatar thumbnail, Logout.
  */
 export default function ProfileHeaderBar({
-  formData, isDirty, initials,
+  formData, isDirty, canDiscard, initials, saving,
   onDiscard, onSave, onLogout,
 }) {
   return (
@@ -19,8 +19,8 @@ export default function ProfileHeaderBar({
         <button
           className="tb-btn"
           onClick={onDiscard}
-          disabled={!isDirty}
-          style={{ background: 'transparent', border: 'none', color: 'inherit', cursor: isDirty ? 'pointer' : 'default' }}
+          disabled={!canDiscard || saving}
+          style={{ background: 'transparent', border: 'none', color: 'inherit', cursor: canDiscard ? 'pointer' : 'default' }}
         >
           Discard
         </button>
@@ -28,9 +28,9 @@ export default function ProfileHeaderBar({
           className={`tb-btn save ${isDirty ? 'pulse' : ''}`}
           id="btnSaveAll"
           onClick={onSave}
-          disabled={!isDirty}
+          disabled={!isDirty || saving}
         >
-          Save Changes
+          {saving ? 'Saving…' : 'Save Changes'}
         </button>
         <div
           className="tb-av user-avatar"

@@ -88,11 +88,7 @@ function getSections(role) {
 
 function getCurrentUser() {
   try {
-    const stored =
-      localStorage.getItem('user') ||
-      localStorage.getItem('nexus_user') ||
-      localStorage.getItem('currentUser');
-    const raw = stored ? JSON.parse(stored) : {};
+    const raw = authService.getCurrentUser() || {};
     const role = raw.role || 'user';
     return {
       firstName: raw.firstName || raw.name?.split(' ')[0] || raw.username || 'User',
@@ -114,7 +110,10 @@ export default function SideBar() {
   const [user, setUser] = useState(getCurrentUser);
 
   useEffect(() => {
-    setUser(getCurrentUser());
+    const refresh = () => setUser(getCurrentUser());
+    refresh();
+    window.addEventListener('session-updated', refresh);
+    return () => window.removeEventListener('session-updated', refresh);
   }, [location.pathname]);
 
   const toggleCollapse = () => {

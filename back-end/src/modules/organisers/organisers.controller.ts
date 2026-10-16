@@ -1,3 +1,4 @@
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Query } from '@nestjs/common';
 import { ApiBody, ApiHeader, ApiOkResponse, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -29,11 +30,11 @@ export class OrganisersController {
   }
 
   @Post('apply')
-  @Roles(AppRole.USER, AppRole.ORGANIZER, AppRole.ADMIN)
+  @Roles(AppRole.USER)
   @ApiOperation({ summary: 'Apply to become a Verified Organizer', description: 'Creates a pending application. Does not itself grant the organizer role — see PATCH /:id.' })
   @ApiBody({ type: ApplyOrganiserDto })
-  apply(@Body() payload: ApplyOrganiserDto) {
-    return this.organisersService.apply(payload.userId, payload.experienceNote);
+  apply(@CurrentUser('id') userId: number, @Body() payload: ApplyOrganiserDto) {
+    return this.organisersService.apply(userId, payload);
   }
 
   @Patch(':id')
@@ -42,7 +43,7 @@ export class OrganisersController {
   @ApiParam({ name: 'id', type: Number })
   @ApiBody({ type: UpdateOrganiserStatusDto })
   setStatus(@Param('id', ParseIntPipe) id: number, @Body() payload: UpdateOrganiserStatusDto) {
-    return this.organisersService.setStatus(id, payload.status);
+    return this.organisersService.setStatus(id, payload.status, payload.rejectionReason);
   }
 
   @Get('profile')
@@ -50,7 +51,7 @@ export class OrganisersController {
   @ApiOperation({ summary: "Get a user's organiser application/plan status" })
   @ApiQuery({ name: 'userId', required: true, example: 6 })
   @ApiOkResponse({ description: 'Application status, plan, and plan limits' })
-  profile(@Query('userId') userId: string) {
+  profile(@CurrentUser('id') userId: number) {
     return this.organisersService.profile(Number(userId));
   }
 

@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 
-const API_BASE = 'http://localhost:3000/api';
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 /**
  * Custom hook managing user directory, role editing, suspensions, and bans.
@@ -24,17 +24,28 @@ export default function useAdminUsers(adminUser, showToast, addAuditLog) {
   }, [users, userSearch, userRoleFilter]);
 
   const updateUserRole = async (userId, newRole) => {
-    setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u)));
-    setEditingUser(null);
-    addAuditLog(`Updated role for user #${userId} to ${newRole}`, 'role');
-    showToast(`✓ Role updated to ${newRole}`);
     try {
-      await fetch(`${API_BASE}/users/${userId}`, {
+      const res = await fetch(`${API_BASE}/users/${userId}/role`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', 'x-role': adminUser.role },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': String(adminUser.id || 1),
+          'x-role': adminUser.role || 'admin',
+        },
         body: JSON.stringify({ role: newRole }),
       });
-    } catch {}
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || 'Failed to update role');
+      }
+      const updatedUser = await res.json();
+      setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, role: updatedUser.role || newRole } : u)));
+      setEditingUser(null);
+      addAuditLog(`Updated role for user #${userId} to ${newRole}`, 'role');
+      showToast(`✓ Role updated to ${newRole}`);
+    } catch (err) {
+      showToast(`❌ ${err.message}`);
+    }
   };
 
   const suspendUser = async (userId) => {

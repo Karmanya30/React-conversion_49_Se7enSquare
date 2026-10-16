@@ -24,6 +24,7 @@ import OwnerDashboard from './Pages/OwnerDashboard';
 import ProfileSettings from './Pages/ProfileSettings';
 import User from './Pages/User';
 import { authService } from './services/authService';
+import { getHomeRoute } from './services/roleAccess';
 
 // Protected Route wrapper with role-based access control
 function ProtectedRoute({ children, allowedRoles }) {
@@ -33,19 +34,26 @@ function ProtectedRoute({ children, allowedRoles }) {
     return <Navigate to="/login" replace />;
   }
 
+  const role = (user.role || 'user').toLowerCase();
+
+  // Platform owner is a statistics-only role; redirect away from generic player dashboard
+  if (role === 'owner' && (!allowedRoles || !allowedRoles.includes('owner'))) {
+    return <Navigate to={getHomeRoute(role)} replace />;
+  }
+
   if (allowedRoles && allowedRoles.length > 0) {
-    const role = (user.role || '').toLowerCase();
-    // admin has superuser access to all admin/mod/cm/organizer/owner views
+    // Admin has superuser access to all operational views
     if (role === 'admin') {
       return children;
     }
     if (!allowedRoles.includes(role)) {
-      return <Navigate to="/dashboard" replace />;
+      return <Navigate to={getHomeRoute(role)} replace />;
     }
   }
 
   return children;
 }
+
 
 export default function App() {
   return (

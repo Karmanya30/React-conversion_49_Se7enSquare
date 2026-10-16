@@ -1,12 +1,24 @@
 import { useState, useEffect } from 'react';
 
-const API_BASE = 'http://localhost:3000/api';
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 function getUser() {
   try {
-    const raw = JSON.parse(localStorage.getItem('nexus_user') || localStorage.getItem('currentUser') || '{}');
-    return { id: raw.id, role: raw.role || 'user', username: raw.username || 'user', firstName: raw.firstName || 'User' };
-  } catch { return { role: 'user', username: 'user', firstName: 'User' }; }
+    const raw = JSON.parse(
+      localStorage.getItem('user') ||
+      localStorage.getItem('nexus_user') ||
+      localStorage.getItem('currentUser') ||
+      '{}'
+    );
+    return {
+      id: raw.id,
+      role: raw.role || 'user',
+      username: raw.username || 'user',
+      firstName: raw.firstName || raw.name?.split(' ')[0] || 'User',
+    };
+  } catch {
+    return { role: 'user', username: 'user', firstName: 'User' };
+  }
 }
 
 function getJoinedIdList() {

@@ -1,11 +1,16 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
-const API_BASE = 'http://localhost:3000/api';
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 function getUser() {
   try {
-    const raw = JSON.parse(localStorage.getItem('currentUser') || localStorage.getItem('nexus_user') || '{}');
+    const raw = JSON.parse(
+      localStorage.getItem('user') ||
+      localStorage.getItem('currentUser') ||
+      localStorage.getItem('nexus_user') ||
+      '{}'
+    );
     return {
       id: raw.id || 4,
       role: raw.role || 'user',
@@ -21,9 +26,14 @@ function getUser() {
 export default function useReportForm() {
   const [currentUser] = useState(() => {
     try {
-      const u = JSON.parse(localStorage.getItem('currentUser') || localStorage.getItem('nexus_user') || '{}');
+      const u = JSON.parse(
+        localStorage.getItem('user') ||
+        localStorage.getItem('currentUser') ||
+        localStorage.getItem('nexus_user') ||
+        '{}'
+      );
       return {
-        firstName: u.firstName || u.username || 'User',
+        firstName: u.firstName || u.name?.split(' ')[0] || u.username || 'User',
       };
     } catch {
       return { firstName: 'User' };

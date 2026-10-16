@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../../../services/authService';
 import { initiateGoogleSignIn } from '../../../services/googleAuth';
+import { getHomeRoute } from '../../../services/roleAccess';
 
 export const PERSONAS = [
   { name: 'ADMIN (admin01)', username: 'admin01', role: 'admin', icon: '🛡️', pass: 'Demo@123' },
@@ -47,6 +48,23 @@ export default function useAuthForm() {
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginErrors, setLoginErrors] = useState({});
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const accountStatus = params.get('accountStatus');
+      const reason = params.get('reason');
+      if (accountStatus) {
+        const msg =
+          reason ||
+          (accountStatus === 'ACCOUNT_BANNED'
+            ? 'This account has been banned.'
+            : 'This account has been suspended.');
+        setLoginErrors((prev) => ({ ...prev, general: msg }));
+        showToast('⚠️', msg);
+      }
+    }
+  }, []);
+
   const validateLogin = () => {
     const errors = {};
     const trimmedInput = loginEmail.trim();
@@ -64,27 +82,9 @@ export default function useAuthForm() {
   };
 
   const navigateByRole = (userRole) => {
-    switch (userRole) {
-      case 'admin':
-        navigate('/admin-dashboard');
-        break;
-      case 'owner':
-        navigate('/owner-dashboard');
-        break;
-      case 'organizer':
-        navigate('/organizer-dashboard');
-        break;
-      case 'moderator':
-        navigate('/mod-panel');
-        break;
-      case 'community_manager':
-        navigate('/event-approval');
-        break;
-      default:
-        navigate('/dashboard');
-        break;
-    }
+    navigate(getHomeRoute(userRole));
   };
+
 
   const handleLoginSubmit = async (e) => {
     if (e && e.preventDefault) e.preventDefault();

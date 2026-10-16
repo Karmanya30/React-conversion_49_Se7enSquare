@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { OAuth2Client } from 'google-auth-library';
-import { db, nextId, saveDb, UserRecord } from '../../common/utils/in-memory-db';
+import { db, nextId, saveDb, UserRecord, hashPassword, verifyPassword } from '../../common/utils/in-memory-db';
+import { sanitizeUser, SanitizedUser } from '../../common/utils/sanitize-user';
 import { AppRole } from '../rbac/role.enum';
 import { GoogleAuthDto } from './dto/google-auth.dto';
 
@@ -33,7 +34,7 @@ interface VerifiedGoogleProfile {
 export class AuthService {
   private readonly oauthClient = new OAuth2Client();
 
-  register(payload: RegisterPayload): UserRecord {
+  register(payload: RegisterPayload): SanitizedUser {
     const exists = db.users.some(
       (user) =>
         user.email.toLowerCase() === payload.email.toLowerCase() ||
@@ -47,33 +48,45 @@ export class AuthService {
       id: nextId('user'),
       username: payload.username,
       email: payload.email,
-      password: payload.password,
-      role: payload.role || AppRole.USER,
+      passwordHash: hashPassword(payload.password),
+      role: AppRole.USER, // normal registration always defaults to user role
       firstName: payload.firstName,
       lastName: payload.lastName,
       avatar: null,
       authProvider: 'local',
+      status: 'active',
+      createdAt: new Date().toISOString(),
+      privacy: { showActivity: true, allowDMs: true },
     };
     db.users.push(created);
     saveDb();
-    return created;
+    return sanitizeUser(created);
   }
 
-  login(payload: LoginPayload): UserRecord {
+  login(payload: LoginPayload): SanitizedUser {
     const login = payload.login.toLowerCase();
     const user = db.users.find(
-      (item) =>
-        (item.email.toLowerCase() === login || item.username.toLowerCase() === login) &&
-        (item.password || 'Demo@123') === payload.password,
+      (item) => item.email.toLowerCase() === login || item.username.toLowerCase() === login,
     );
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
+
+    const isValid = user.passwordHash
+      ? verifyPassword(payload.password, user.passwordHash)
+      : (user.password || 'Demo@123') === payload.password;
+
+    if (!isValid) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
     if (payload.role && user.role !== payload.role) {
       throw new UnauthorizedException('Invalid role for this account');
     }
-    return user;
+
+    return sanitizeUser(user);
   }
+
 
   /**
    * Securely validates Google OAuth credential / token on the backend
@@ -184,7 +197,7 @@ export class AuthService {
         existingUser.avatar = googleProfile.picture;
       }
       saveDb();
-      return existingUser;
+      return sanitizeUser(existingUser);
     }
 
     // Provision new user
@@ -207,10 +220,13 @@ export class AuthService {
       avatar: googleProfile.picture || null,
       googleId,
       authProvider: 'google',
+      status: 'active',
+      createdAt: new Date().toISOString(),
+      privacy: { showActivity: true, allowDMs: true },
     };
 
     db.users.push(newUser);
     saveDb();
-    return newUser;
+    return sanitizeUser(newUser);
   }
 }

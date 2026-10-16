@@ -6,16 +6,21 @@ import {
   MOD_QUIZ_QUESTIONS,
 } from '../data/profileSettingsData';
 
-const API_BASE = 'http://localhost:3000/api';
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 function getStoredUser() {
   try {
-    const raw = JSON.parse(localStorage.getItem('nexus_user') || localStorage.getItem('currentUser') || '{}');
+    const raw = JSON.parse(
+      localStorage.getItem('user') ||
+      localStorage.getItem('nexus_user') ||
+      localStorage.getItem('currentUser') ||
+      '{}'
+    );
     const uName = raw.username || raw.handle || 'user';
     return {
       id:        raw.id        || 1,
-      firstName: raw.firstName || (uName ? uName.charAt(0).toUpperCase() + uName.slice(1) : 'User'),
-      lastName:  raw.lastName  || '',
+      firstName: raw.firstName || raw.name?.split(' ')[0] || (uName ? uName.charAt(0).toUpperCase() + uName.slice(1) : 'User'),
+      lastName:  raw.lastName  || raw.name?.split(' ').slice(1).join(' ') || '',
       fullName:  raw.fullName  || raw.name || `${raw.firstName || 'User'} ${raw.lastName || ''}`.trim(),
       username:  uName,
       handle:    raw.handle    || uName,
@@ -115,32 +120,56 @@ export default function useProfileSettings() {
     };
 
     try {
-      localStorage.setItem('nexus_user',    JSON.stringify(updatedUser));
-      localStorage.setItem('currentUser',   JSON.stringify(updatedUser));
-      setUser(updatedUser);
-      setIsDirty(false);
-
-      const patchBody = { firstName: updatedUser.firstName, lastName: updatedUser.lastName };
+      const patchBody = {
+        firstName: updatedUser.firstName,
+        lastName: updatedUser.lastName,
+      };
       if (updatedUser.bio && updatedUser.bio.length >= 5 && updatedUser.bio.length <= 160) {
         patchBody.bio = updatedUser.bio;
+      }
+      if (updatedUser.phone) {
+        patchBody.phone = updatedUser.phone;
       }
       if (updatedUser.avatar && updatedUser.avatar.length <= 300) {
         patchBody.avatar = updatedUser.avatar;
       }
 
-      await fetch(`${API_BASE}/users/${user.id}`, {
+      const res = await fetch(`${API_BASE}/users/me`, {
         method:  'PATCH',
-        headers: { 'Content-Type': 'application/json', 'x-role': user.role || 'user' },
-        body:    JSON.stringify(patchBody),
-      }).catch(() => {});
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': String(user.id),
+          'x-role': user.role || 'user',
+        },
+        body: JSON.stringify(patchBody),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || 'Failed to save profile changes');
+      }
+
+      const savedUser = await res.json();
+      const sessionUser = {
+        id: savedUser.id || user.id,
+        username: savedUser.username || user.username,
+        role: savedUser.role || user.role,
+        name: `${savedUser.firstName || ''} ${savedUser.lastName || ''}`.trim() || user.fullName,
+      };
+      localStorage.setItem('user', JSON.stringify(sessionUser));
+      localStorage.setItem('nexus_user', JSON.stringify(updatedUser));
+      localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+      setUser(updatedUser);
+      setIsDirty(false);
 
       showToast('✅ Profile & settings saved successfully!');
-    } catch {
-      showToast('❌ Failed to save changes.');
+    } catch (err) {
+      showToast(`❌ ${err.message || 'Failed to save changes.'}`);
     }
   };
 
   const handleLogout = () => {
+    localStorage.removeItem('user');
     localStorage.removeItem('nexus_user');
     localStorage.removeItem('currentUser');
     navigate('/login');

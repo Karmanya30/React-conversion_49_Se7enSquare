@@ -2,6 +2,7 @@ import { MiddlewareConsumer, Module, NestModule, RequestMethod } from '@nestjs/c
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'node:path';
+import { AuthContextGuard } from './common/guards/auth-context.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { FileLoggerService } from './common/logger/file-logger.service';
 import { LoggingMiddleware } from './common/middleware/logging.middleware';
@@ -74,6 +75,10 @@ import { AppealsController } from './modules/appeals/appeals.controller';
   ],
   providers: [
     FileLoggerService,
+    {
+      provide: APP_GUARD,
+      useClass: AuthContextGuard,
+    },
     {
       provide: APP_GUARD,
       useClass: RolesGuard,

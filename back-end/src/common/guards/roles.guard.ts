@@ -24,19 +24,23 @@ export class RolesGuard implements CanActivate {
     }
 
     const request = context.switchToHttp().getRequest<Request>();
-    const rawRole = request.headers['x-role'];
-    const roleValue = Array.isArray(rawRole) ? rawRole[0] : rawRole;
-    let role = typeof roleValue === 'string' ? roleValue.trim().toLowerCase() : undefined;
+    const user = (request as any).user;
+    let role = user ? user.role : (request as any).userRole;
 
-    // normalise frontend aliases
-    if (role === 'gamer') role = 'user';
-    if (role === 'community-manager' || role === 'community manager' || role === 'cm') {
-      role = 'community_manager';
+    if (!role) {
+      const rawRole = request.headers['x-role'];
+      const roleValue = Array.isArray(rawRole) ? rawRole[0] : rawRole;
+      role = typeof roleValue === 'string' ? roleValue.trim().toLowerCase() : undefined;
+      // normalise frontend aliases
+      if (role === 'gamer') role = 'user';
+      if (role === 'community-manager' || role === 'community manager' || role === 'cm') {
+        role = 'community_manager';
+      }
+      if (role === 'organiser') role = 'organizer'; // UK spelling alias
     }
-    if (role === 'organiser') role = 'organizer'; // UK spelling alias
 
     if (!role || !ALL_ROLES.includes(role)) {
-      throw new ForbiddenException('Missing or invalid x-role header');
+      throw new ForbiddenException('Missing or invalid role');
     }
 
     if (!requiredRoles.includes(role as AppRole)) {
@@ -46,4 +50,5 @@ export class RolesGuard implements CanActivate {
     return true;
   }
 }
+
 

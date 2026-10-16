@@ -3,11 +3,14 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { DEFAULT_COMMUNITY } from '../data/defaultCommunityData';
 import useDirtyForm from './useDirtyForm';
 
-const API_BASE = 'http://localhost:3000/api';
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 function getRole() {
   try {
-    const stored = localStorage.getItem('nexus_user') || localStorage.getItem('currentUser');
+    const stored =
+      localStorage.getItem('user') ||
+      localStorage.getItem('nexus_user') ||
+      localStorage.getItem('currentUser');
     const raw = stored ? JSON.parse(stored) : {};
     return raw.role || 'user';
   } catch {

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import AppShell from '../Components/platform/layout/AppShell';
 import Toast from '../Components/platform/common/Toast';
 import useToast from '../Components/platform/hooks/useToast';
@@ -22,14 +23,24 @@ import '../styles/global.css';
 import '../styles/sidebar.css';
 import '../styles/admin-dashboard.css';
 
-const API_BASE = 'http://localhost:3000/api';
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 function getAdminUser() {
   try {
-    const raw = JSON.parse(localStorage.getItem('nexus_user') || localStorage.getItem('currentUser') || '{}');
-    return { role: raw.role || 'admin', firstName: raw.firstName || 'Rajat', username: raw.username || 'rajat' };
+    const raw = JSON.parse(
+      localStorage.getItem('user') ||
+      localStorage.getItem('nexus_user') ||
+      localStorage.getItem('currentUser') ||
+      '{}'
+    );
+    return {
+      id: raw.id || 1,
+      role: raw.role || 'admin',
+      firstName: raw.firstName || raw.name?.split(' ')[0] || 'Rajat',
+      username: raw.username || 'rajat',
+    };
   } catch {
-    return { role: 'admin', firstName: 'Rajat', username: 'rajat' };
+    return { id: 1, role: 'admin', firstName: 'Rajat', username: 'rajat' };
   }
 }
 
@@ -40,9 +51,23 @@ function getAdminUser() {
  */
 export default function AdminDashboard() {
   const adminUser = getAdminUser();
-  const [activePage, setActivePage] = useState('overview');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const [activePage, setActivePage] = useState(tabParam || 'overview');
   const [globalSearch, setGlobalSearch] = useState('');
   const [stats, setStats] = useState(DEFAULT_STATS);
+
+  useEffect(() => {
+    const currentTab = searchParams.get('tab');
+    if (currentTab && currentTab !== activePage) {
+      setActivePage(currentTab);
+    }
+  }, [searchParams, activePage]);
+
+  const handleSelectPage = (pageId) => {
+    setActivePage(pageId);
+    setSearchParams({ tab: pageId });
+  };
 
   const { toast, showToast } = useToast();
   const { auditLog, addAuditLog } = useAuditLog(adminUser.username);
@@ -94,13 +119,17 @@ export default function AdminDashboard() {
   useEffect(() => {
     async function fetchAll() {
       try {
+        const headers = {
+          'x-user-id': String(adminUser.id || 1),
+          'x-role': adminUser.role || 'admin',
+        };
         const [usersRes, commsRes, reportsRes, eventsRes, appealsRes, statsRes] = await Promise.all([
-          fetch(`${API_BASE}/users`, { headers: { 'x-role': adminUser.role } }),
-          fetch(`${API_BASE}/communities`, { headers: { 'x-role': adminUser.role } }),
-          fetch(`${API_BASE}/reports`, { headers: { 'x-role': adminUser.role } }),
-          fetch(`${API_BASE}/events`, { headers: { 'x-role': adminUser.role } }),
-          fetch(`${API_BASE}/appeals`, { headers: { 'x-role': adminUser.role } }),
-          fetch(`${API_BASE}/dashboard/stats`, { headers: { 'x-role': adminUser.role } }),
+          fetch(`${API_BASE}/users`, { headers }),
+          fetch(`${API_BASE}/communities`, { headers }),
+          fetch(`${API_BASE}/reports`, { headers }),
+          fetch(`${API_BASE}/events`, { headers }),
+          fetch(`${API_BASE}/appeals`, { headers }),
+          fetch(`${API_BASE}/dashboard/stats`, { headers }),
         ]);
         if (usersRes.ok) { const d = await usersRes.json(); setUsers(Array.isArray(d) ? d : []); }
         if (commsRes.ok) { const d = await commsRes.json(); setCommunities(Array.isArray(d) ? d : []); }
@@ -117,9 +146,9 @@ export default function AdminDashboard() {
       } catch {}
     }
     fetchAll();
-  }, [adminUser.role, setUsers, setCommunities, setReports, setEvents, setAppeals]);
+  }, [adminUser.id, adminUser.role, setUsers, setCommunities, setReports, setEvents, setAppeals]);
 
-  // Recalculate platform overview stats based on actual data
+  // Recalculate platform overview stats strictly from data
   useEffect(() => {
     setStats((prev) => ({
       users: users.length,
@@ -144,7 +173,7 @@ export default function AdminDashboard() {
         />
       }
     >
-      <AdminNav activePage={activePage} onSelectPage={setActivePage} />
+      <AdminNav activePage={activePage} onSelectPage={handleSelectPage} />
 
       <div className="admin-content-area">
         {activePage === 'overview' && (
@@ -152,7 +181,7 @@ export default function AdminDashboard() {
             stats={stats}
             auditLog={auditLog}
             openReportsCount={stats.reports}
-            onNavigate={setActivePage}
+            onNavigate={handleSelectPage}
           />
         )}
 

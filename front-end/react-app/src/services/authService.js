@@ -2,7 +2,7 @@
  * Authentication Service Module
  * Handles login, registration, session persistence, and logout.
  */
-import { apiRequest, getStoredUser } from './api';
+import { apiRequest, getStoredUser, storeUserSession, clearUserSession } from './api';
 
 export const authService = {
   /**
@@ -56,23 +56,19 @@ export const authService = {
   },
 
   /**
-   * Persists authenticated user in localStorage.
+   * Persists authenticated user in localStorage with whitelisted fields only.
    */
   saveSession(user) {
-    if (!user) return;
-    localStorage.setItem('nexus_user', JSON.stringify(user));
-    localStorage.setItem('currentUser', JSON.stringify(user));
-    localStorage.setItem('role', user.role || 'user');
+    storeUserSession(user);
   },
 
   /**
    * Clears authenticated session from localStorage.
    */
   clearSession() {
-    localStorage.removeItem('nexus_user');
-    localStorage.removeItem('currentUser');
-    localStorage.removeItem('role');
+    clearUserSession();
   },
+
 
   /**
    * Retrieves active user or fallback.

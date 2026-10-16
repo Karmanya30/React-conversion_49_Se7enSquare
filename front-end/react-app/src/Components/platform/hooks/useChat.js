@@ -2,11 +2,16 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { DEFAULT_CHANNELS, EMOJIS } from '../data/chatData';
 
-const API_BASE = 'http://localhost:3000/api';
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 function getUser() {
   try {
-    const raw = JSON.parse(localStorage.getItem('nexus_user') || localStorage.getItem('currentUser') || '{}');
+    const raw = JSON.parse(
+      localStorage.getItem('user') ||
+      localStorage.getItem('nexus_user') ||
+      localStorage.getItem('currentUser') ||
+      '{}'
+    );
     const name = raw.fullName || raw.name || (raw.firstName ? `${raw.firstName} ${raw.lastName || ''}`.trim() : raw.username || 'User');
     return {
       id: raw.id || 1,

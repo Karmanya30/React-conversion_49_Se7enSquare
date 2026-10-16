@@ -1,18 +1,17 @@
+import { getStoredUser } from '../../../services/api';
+
 /**
  * Safe local storage reader for current session user.
  */
 export function getPlatformUser() {
-  try {
-    const raw = JSON.parse(
-      localStorage.getItem('currentUser') || localStorage.getItem('nexus_user') || '{}'
-    );
-    return {
-      id: raw.id || 1,
-      firstName: raw.firstName || raw.username || 'Gamer',
-      username: raw.username || 'gamer',
-      role: raw.role || 'user',
-    };
-  } catch {
-    return { id: 1, firstName: 'Gamer', username: 'gamer', role: 'user' };
-  }
+  const user = getStoredUser();
+  if (!user) return null;
+  return {
+    id: user.id,
+    firstName: user.firstName || user.username || '',
+    lastName: user.lastName || '',
+    username: user.username || '',
+    role: user.role || 'user',
+  };
 }
+

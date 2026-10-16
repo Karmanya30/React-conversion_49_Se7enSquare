@@ -3,11 +3,16 @@ import {
   URL_PATTERN, CATEGORIES, ICONS, BANNERS, DEFAULT_CHANNELS, DEFAULT_PERMISSIONS,
 } from '../data/createCommunityOptions';
 
-const API_BASE = 'http://localhost:3000/api';
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 function getCurrentUser() {
   try {
-    const raw = JSON.parse(localStorage.getItem('nexus_user') || localStorage.getItem('currentUser') || '{}');
+    const raw = JSON.parse(
+      localStorage.getItem('user') ||
+      localStorage.getItem('nexus_user') ||
+      localStorage.getItem('currentUser') ||
+      '{}'
+    );
     return { id: raw.id, username: raw.username, role: raw.role };
   } catch { return {}; }
 }

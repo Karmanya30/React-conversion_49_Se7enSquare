@@ -3,17 +3,43 @@ import Button from '../../../Components/Button';
 import { PLAN_RANK } from '../../../Components/platform/data/pricingPlans';
 
 /**
- * Single subscription tier card component matching commit 0cc099a.
+ * Single subscription tier card component.
  */
-export default function PricingCard({ plan, currentPlan, onPlanChange }) {
+export default function PricingCard({
+  plan,
+  currentPlan,
+  onPlanChange,
+  isLoading,
+  isSubmitting,
+  isOwner,
+}) {
   const isCurrent = plan.id === currentPlan;
   const isDowngrade = PLAN_RANK[plan.id] < PLAN_RANK[currentPlan];
 
+  let ctaContent;
+  let isDisabled = isSubmitting;
+
+
+  if (isLoading) {
+    ctaContent = 'Loading...';
+    isDisabled = true;
+  } else if (isOwner) {
+    ctaContent = 'Platform Owner Role';
+    isDisabled = true;
+  } else if (isCurrent) {
+    ctaContent = 'Current Plan';
+    isDisabled = true;
+  } else if (isDowngrade) {
+    ctaContent = isSubmitting ? 'Updating...' : 'Downgrade';
+  } else {
+    ctaContent = isSubmitting ? 'Updating...' : `Upgrade to ${plan.name}`;
+  }
+
   return (
     <div
-      className={`plan-card ${isCurrent ? 'current' : ''} ${plan.featured ? 'featured' : ''}`}
+      className={`plan-card ${isCurrent && !isOwner ? 'current' : ''} ${plan.featured ? 'featured' : ''}`}
     >
-      {isCurrent && <div className="plan-badge-current">CURRENT</div>}
+      {isCurrent && !isOwner && <div className="plan-badge-current">CURRENT</div>}
 
       <div className="plan-name">{plan.name}</div>
 
@@ -34,19 +60,14 @@ export default function PricingCard({ plan, currentPlan, onPlanChange }) {
         ))}
       </ul>
 
-      {isCurrent ? (
-        <Button className="plan-cta current" disabled>
-          Current Plan
-        </Button>
-      ) : isDowngrade ? (
-        <Button className="plan-cta downgrade" onClick={() => onPlanChange(plan.id)}>
-          Downgrade
-        </Button>
-      ) : (
-        <Button className="plan-cta primary" onClick={() => onPlanChange(plan.id)}>
-          Upgrade to {plan.name}
-        </Button>
-      )}
+      <Button
+        className={`plan-cta ${isCurrent && !isOwner ? 'current' : isDowngrade ? 'downgrade' : 'primary'}`}
+        disabled={isDisabled}
+        onClick={() => !isDisabled && onPlanChange(plan.id)}
+      >
+        {ctaContent}
+      </Button>
     </div>
   );
 }
+

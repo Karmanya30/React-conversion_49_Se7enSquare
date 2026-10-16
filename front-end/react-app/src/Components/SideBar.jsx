@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { authService } from '../services/authService';
+import { getHomeRoute } from '../services/roleAccess';
 import '../styles/sidebar.css';
 
 /**
@@ -50,12 +51,12 @@ const NAV_ADMIN = {
   label: 'Admin',
   sectionId: 'admin',
   items: [
-    { id: 'admin-dash', name: 'Admin Panel', link: '/admin-dashboard', icon: '⚡', badge: 'ADMIN' },
-    { id: 'users', name: 'User Management', link: '/admin-dashboard', icon: '👤' },
-    { id: 'communities-admin', name: 'Communities', link: '/admin-dashboard', icon: '🏘️' },
-    { id: 'audit', name: 'Audit Logs', link: '/admin-dashboard', icon: '📋' },
+    { id: 'admin-dash', name: 'Admin Panel', link: '/admin-dashboard?tab=overview', icon: '⚡', badge: 'ADMIN' },
+    { id: 'users', name: 'User Management', link: '/admin-dashboard?tab=users', icon: '👤' },
+    { id: 'communities-admin', name: 'Communities', link: '/admin-dashboard?tab=communities', icon: '🏘️' },
   ],
 };
+
 
 const NAV_OWNER = {
   label: null,
@@ -87,12 +88,15 @@ function getSections(role) {
 
 function getCurrentUser() {
   try {
-    const stored = localStorage.getItem('nexus_user') || localStorage.getItem('currentUser');
+    const stored =
+      localStorage.getItem('user') ||
+      localStorage.getItem('nexus_user') ||
+      localStorage.getItem('currentUser');
     const raw = stored ? JSON.parse(stored) : {};
     const role = raw.role || 'user';
     return {
-      firstName: raw.firstName || raw.username || 'User',
-      lastName: raw.lastName || '',
+      firstName: raw.firstName || raw.name?.split(' ')[0] || raw.username || 'User',
+      lastName: raw.lastName || raw.name?.split(' ').slice(1).join(' ') || '',
       username: raw.username || 'user',
       role,
       avatar: raw.avatar || null,
@@ -125,6 +129,10 @@ export default function SideBar() {
   const initials = `${user.firstName?.[0] || ''}${user.lastName?.[0] || user.firstName?.[1] || ''}`.toUpperCase();
 
   const isActive = (link) => {
+    const [path, search] = link.split('?');
+    if (search) {
+      return location.pathname === path && location.search === `?${search}`;
+    }
     return location.pathname === link || location.pathname.startsWith(link + '/');
   };
 
@@ -136,10 +144,11 @@ export default function SideBar() {
     >
       {/* Brand Header */}
       <div className="sb-brand">
-        <Link to="/dashboard" className="sb-brand__logo" style={{ textDecoration: 'none' }}>
+        <Link to={getHomeRoute(role)} className="sb-brand__logo" style={{ textDecoration: 'none' }}>
           <span className="sb-brand__icon">🎮</span>
           {!collapsed && <span className="sb-brand__name">Gameunity</span>}
         </Link>
+
         <button
           className={`sb-toggle-btn${collapsed ? ' rotated' : ''}`}
           onClick={toggleCollapse}

@@ -3,51 +3,42 @@ import { useSearchParams } from 'react-router-dom';
 import AppShell from '../Components/platform/layout/AppShell';
 import Toast from '../Components/platform/common/Toast';
 import useToast from '../Components/platform/hooks/useToast';
-import useAuditLog from './AdminDashboard/hooks/useAuditLog';
 import useAdminUsers from './AdminDashboard/hooks/useAdminUsers';
+import useAdminCommunities from './AdminDashboard/hooks/useAdminCommunities';
 import useAdminModeration from './AdminDashboard/hooks/useAdminModeration';
-import useAdminConfig from './AdminDashboard/hooks/useAdminConfig';
 import { PAGES, DEFAULT_STATS } from '../Components/platform/data/adminData';
 import AdminHeader from './AdminDashboard/components/AdminHeader';
 import AdminNav from './AdminDashboard/components/AdminNav';
 import OverviewTab from './AdminDashboard/components/OverviewTab';
 import UsersTab from './AdminDashboard/components/UsersTab';
 import CommunitiesTab from './AdminDashboard/components/CommunitiesTab';
-import ModerationTab from './AdminDashboard/components/ModerationTab';
-import AppealsTab from './AdminDashboard/components/AppealsTab';
+import EscalatedReportsTab from './AdminDashboard/components/EscalatedReportsTab';
 import EventsTab from './AdminDashboard/components/EventsTab';
+import AppealsTab from './AdminDashboard/components/AppealsTab';
 import ApplicationsTab from './AdminDashboard/components/ApplicationsTab';
-import AuditLogTab from './AdminDashboard/components/AuditLogTab';
-import ConfigTab from './AdminDashboard/components/ConfigTab';
+import { apiRequest, getStoredUser } from '../services/api';
 import '../styles/global.css';
 import '../styles/sidebar.css';
 import '../styles/admin-dashboard.css';
 
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
-
 function getAdminUser() {
   try {
-    const raw = JSON.parse(
-      localStorage.getItem('user') ||
-      localStorage.getItem('nexus_user') ||
-      localStorage.getItem('currentUser') ||
-      '{}'
-    );
+    const raw = getStoredUser() || {};
     return {
       id: raw.id || 1,
       role: raw.role || 'admin',
-      firstName: raw.firstName || raw.name?.split(' ')[0] || 'Rajat',
-      username: raw.username || 'rajat',
+      firstName: raw.firstName || raw.name?.split(' ')[0] || 'Admin',
+      username: raw.username || 'admin',
     };
   } catch {
-    return { id: 1, role: 'admin', firstName: 'Rajat', username: 'rajat' };
+    return { id: 1, role: 'admin', firstName: 'Admin', username: 'admin' };
   }
 }
 
 /**
  * Admin Dashboard Page Component
- * Refactored modular dashboard orchestrating sub-hooks and subcomponents
- * for 9 administrative views while preserving all classes and handlers.
+ * Orchestrates sub-hooks and subcomponents for platform administration:
+ * Overview, Users, Communities, Escalated Reports, Events, Appeals, and Applications.
  */
 export default function AdminDashboard() {
   const adminUser = getAdminUser();
@@ -70,11 +61,11 @@ export default function AdminDashboard() {
   };
 
   const { toast, showToast } = useToast();
-  const { auditLog, addAuditLog } = useAuditLog(adminUser.username);
 
   const {
     users,
     setUsers,
+    refreshUsers,
     userSearch,
     setUserSearch,
     userRoleFilter,
@@ -85,14 +76,21 @@ export default function AdminDashboard() {
     updateUserRole,
     suspendUser,
     banUser,
-    resetPassword,
-  } = useAdminUsers(adminUser, (msg) => showToast('ℹ️', msg), addAuditLog);
+    reinstateUser,
+  } = useAdminUsers((msg) => showToast('ℹ️', msg));
 
   const {
     communities,
     setCommunities,
+    refreshCommunities,
+    suspendCommunity,
+    reinstateCommunity,
+  } = useAdminCommunities((msg) => showToast('ℹ️', msg));
+
+  const {
     reports,
     setReports,
+    refreshReports,
     events,
     setEvents,
     appeals,
@@ -103,64 +101,41 @@ export default function AdminDashboard() {
     handleAppeal,
     handleOrganizerApp,
     handleModeratorApp,
-  } = useAdminModeration(adminUser, (msg) => showToast('ℹ️', msg), addAuditLog);
+  } = useAdminModeration((msg) => showToast('ℹ️', msg), refreshUsers);
 
-  const {
-    config,
-    policies,
-    newPolicyText,
-    setNewPolicyText,
-    updateConfigField,
-    handleAddPolicy,
-    handleDeletePolicy,
-  } = useAdminConfig((msg) => showToast('ℹ️', msg), addAuditLog);
-
-  // Fetch initial data from server if available
+  // Initial load
   useEffect(() => {
-    async function fetchAll() {
+    refreshUsers();
+    refreshCommunities();
+    refreshReports();
+
+    async function loadStats() {
       try {
-        const headers = {
-          'x-user-id': String(adminUser.id || 1),
-          'x-role': adminUser.role || 'admin',
-        };
-        const [usersRes, commsRes, reportsRes, eventsRes, appealsRes, statsRes] = await Promise.all([
-          fetch(`${API_BASE}/users`, { headers }),
-          fetch(`${API_BASE}/communities`, { headers }),
-          fetch(`${API_BASE}/reports`, { headers }),
-          fetch(`${API_BASE}/events`, { headers }),
-          fetch(`${API_BASE}/appeals`, { headers }),
-          fetch(`${API_BASE}/dashboard/stats`, { headers }),
-        ]);
-        if (usersRes.ok) { const d = await usersRes.json(); setUsers(Array.isArray(d) ? d : []); }
-        if (commsRes.ok) { const d = await commsRes.json(); setCommunities(Array.isArray(d) ? d : []); }
-        if (reportsRes.ok) { const d = await reportsRes.json(); setReports(Array.isArray(d) ? d : []); }
-        if (eventsRes.ok) { const d = await eventsRes.json(); setEvents(Array.isArray(d) ? d : []); }
-        if (appealsRes.ok) { const d = await appealsRes.json(); setAppeals(Array.isArray(d) ? d : []); }
-        if (statsRes.ok) {
-          const s = await statsRes.json();
+        const s = await apiRequest('/dashboard/stats');
+        if (s) {
           setStats((prev) => ({
             ...prev,
             messages: s.totalMessages || 0,
           }));
         }
-      } catch {}
+      } catch { /* keep defaults */ }
     }
-    fetchAll();
-  }, [adminUser.id, adminUser.role, setUsers, setCommunities, setReports, setEvents, setAppeals]);
+    loadStats();
+  }, [refreshUsers, refreshCommunities, refreshReports]);
 
-  // Recalculate platform overview stats strictly from data
+  // Recalculate platform stats strictly from live data
   useEffect(() => {
     setStats((prev) => ({
       users: users.length,
       comms: communities.length,
-      reports: reports.filter((r) => r.status === 'pending').length,
+      escalatedReports: reports.filter((r) => r.status === 'escalated').length,
       events: events.filter((e) => e.status === 'approved').length,
       appeals: appeals.filter((a) => a.status === 'pending').length,
       messages: prev.messages || 0,
     }));
   }, [users, communities, reports, events, appeals]);
 
-  const currentPage = PAGES.find((p) => p.id === activePage);
+  const currentPage = PAGES.find((p) => p.id === activePage) || PAGES[0];
 
   return (
     <AppShell
@@ -179,8 +154,7 @@ export default function AdminDashboard() {
         {activePage === 'overview' && (
           <OverviewTab
             stats={stats}
-            auditLog={auditLog}
-            openReportsCount={stats.reports}
+            openReportsCount={stats.escalatedReports}
             onNavigate={handleSelectPage}
           />
         )}
@@ -197,23 +171,26 @@ export default function AdminDashboard() {
             updateUserRole={updateUserRole}
             suspendUser={suspendUser}
             banUser={banUser}
-            resetPassword={resetPassword}
+            reinstateUser={reinstateUser}
+            adminUser={adminUser}
           />
         )}
 
         {activePage === 'communities' && (
           <CommunitiesTab
             communities={communities}
-            setCommunities={setCommunities}
-            addAuditLog={addAuditLog}
-            showToast={(msg) => showToast('ℹ️', msg)}
+            users={users}
+            suspendCommunity={suspendCommunity}
+            reinstateCommunity={reinstateCommunity}
           />
         )}
 
-        {activePage === 'moderation' && (
-          <ModerationTab
+        {activePage === 'escalated-reports' && (
+          <EscalatedReportsTab
             reports={reports}
-            onModerationAction={handleModerationAction}
+            users={users}
+            communities={communities}
+            onAction={handleModerationAction}
           />
         )}
 
@@ -229,20 +206,6 @@ export default function AdminDashboard() {
             moderatorApps={moderatorApps}
             onOrganizerApp={handleOrganizerApp}
             onModeratorApp={handleModeratorApp}
-          />
-        )}
-
-        {activePage === 'audit' && <AuditLogTab auditLog={auditLog} />}
-
-        {activePage === 'config' && (
-          <ConfigTab
-            config={config}
-            onUpdateConfig={updateConfigField}
-            policies={policies}
-            newPolicyText={newPolicyText}
-            setNewPolicyText={setNewPolicyText}
-            onAddPolicy={handleAddPolicy}
-            onDeletePolicy={handleDeletePolicy}
           />
         )}
       </div>

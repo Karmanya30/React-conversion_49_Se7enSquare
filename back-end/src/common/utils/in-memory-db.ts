@@ -18,6 +18,8 @@ export interface UserRecord {
   bio?: string;
   firstName?: string;
   lastName?: string;
+  fullName?: string;
+  name?: string;
   phone?: string;
   avatar?: string | null;
   googleId?: string;
@@ -64,6 +66,7 @@ export interface CommunityRecord {
   createdAt?: string;
   memberCount?: number; // derived in UI/service
   onlineCount?: number;
+  ownerName?: string;
 }
 
 
@@ -111,6 +114,7 @@ export interface ReportRecord {
   reason: string;
   status: ReportStatus;
   escalatedTo?: string;
+  resolutionNote?: string;
 }
 
 export interface EventRegistrationRecord {
@@ -212,6 +216,12 @@ export interface OrganiserRecord {
   status: OrganiserStatus;
   plan: OrganiserPlan;
   experienceNote?: string;
+  games?: string;
+  organisations?: string;
+  pastEventLinks?: string[];
+  expectedTournamentSize?: number;
+  rulesAgreement?: boolean;
+  rejectionReason?: string;
   appliedAt: string;
   verifiedAt?: string;
 }
@@ -243,6 +253,10 @@ export interface ModeratorApplicationRecord {
   userId: number;
   status: ModeratorApplicationStatus;
   quizScore: number;
+  passMark?: number;
+  answers?: number[];
+  statement?: { why: string; timeZone: string; weeklyHours: number };
+  rejectionReason?: string;
   appliedAt: string;
   certifiedAt?: string;
 }
@@ -321,7 +335,7 @@ export const MIGRATIONS: MigrationFn[] = [
         if (!u.status) u.status = 'active';
         if (!u.createdAt) u.createdAt = '2026-01-01T00:00:00.000Z';
         if (!u.privacy) u.privacy = { showActivity: true, allowDMs: true };
-        if (!u.passwordHash) {
+        if (!u.passwordHash && u.authProvider !== 'google') {
           u.passwordHash = hashPassword(u.password || 'Demo@123');
         }
         delete u.password;
@@ -445,11 +459,12 @@ if (fs.existsSync(DB_FILE)) {
     }
 
     if (parsed.db && typeof parsed.db === 'object') {
-      for (const key of Object.keys(seedDb) as Array<keyof typeof seedDb>) {
-        if (Array.isArray(seedDb[key])) {
-          db[key] = Array.isArray(parsed.db[key]) ? parsed.db[key] : JSON.parse(JSON.stringify(seedDb[key]));
-        } else if (typeof seedDb[key] === 'object' && seedDb[key] !== null) {
-          db[key] = { ...seedDb[key], ...(parsed.db[key] || {}) };
+      const allKeys = Array.from(new Set([...Object.keys(seedDb), ...Object.keys(parsed.db)]));
+      for (const key of allKeys) {
+        if (parsed.db[key] !== undefined) {
+          db[key] = parsed.db[key];
+        } else if (seedDb[key as keyof typeof seedDb] !== undefined) {
+          db[key] = JSON.parse(JSON.stringify(seedDb[key as keyof typeof seedDb]));
         }
       }
     }

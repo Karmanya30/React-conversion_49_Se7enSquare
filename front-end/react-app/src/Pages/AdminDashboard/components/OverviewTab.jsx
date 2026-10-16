@@ -3,12 +3,11 @@ import StatCard from '../../../Components/platform/common/StatCard';
 import { getStatCards } from '../../../Components/platform/data/adminData';
 import PlatformHealth from './PlatformHealth';
 import QuickActions from './QuickActions';
-import RecentAuditList from './RecentAuditList';
 
 /**
- * Overview tab composing 6 stat cards, health metrics, quick actions, and recent audit activity.
+ * Overview tab composing stat cards, health metrics, and quick actions.
  */
-export default function OverviewTab({ stats, auditLog, openReportsCount, onNavigate }) {
+export default function OverviewTab({ stats, openReportsCount, onNavigate }) {
   const statCards = getStatCards(stats);
 
   return (
@@ -25,7 +24,6 @@ export default function OverviewTab({ stats, auditLog, openReportsCount, onNavig
 
       <PlatformHealth openReportsCount={openReportsCount} />
       <QuickActions onNavigate={onNavigate} />
-      <RecentAuditList auditLog={auditLog} onNavigate={onNavigate} />
     </div>
   );
 }

@@ -103,7 +103,7 @@ export default function useChat() {
       try {
         const [memRes, usersRes] = await Promise.all([
           fetch(`${API_BASE}/memberships?communityId=${communityId}`, { headers: { 'x-role': user.role } }),
-          fetch(`${API_BASE}/users`, { headers: { 'x-role': user.role } }),
+          fetch(`${API_BASE}/users?communityId=${communityId}`, { headers: { 'x-role': user.role } }),
         ]);
         if (memRes.ok && usersRes.ok) {
           const mems = await memRes.json();
@@ -114,7 +114,10 @@ export default function useChat() {
             const mName = u.fullName || u.username || `User #${m.userId}`;
             return {
               name: mName,
+              userId: m.userId,
+              avatar: u.avatar,
               role: u.role || 'Member',
+              status: u.status || 'active',
               initials: mName.slice(0, 2).toUpperCase(),
               color: '#6366f1',
             };

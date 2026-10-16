@@ -2,46 +2,81 @@ import React from 'react';
 
 /**
  * JoinedCommunities Component
- * Renders horizontally scrolling list of joined communities and quick "Create Community" action card.
+ * Renders two sections:
+ *  1. Communities the user has joined (joined by membership, not owned).
+ *  2. Communities the user created / owns ("My Communities").
  */
-export default function JoinedCommunities({ communities, loading, navigate }) {
+export default function JoinedCommunities({ communities, createdCommunities, loading, navigate }) {
+  // Deduplicate: if a community appears in both joined and created, only show it in "My Communities"
+  const createdIds = new Set((createdCommunities || []).map((c) => String(c.id)));
+  const joinedOnly = (communities || []).filter((c) => !createdIds.has(String(c.id)));
+
+  const CommunityCard = ({ comm }) => (
+    <div
+      className="comm-card"
+      style={{ cursor: 'pointer' }}
+      onClick={() => navigate(`/community-page?id=${comm.id}`)}
+    >
+      <div className="comm-card-banner banner-purple" />
+      <div className="comm-card-icon grad-purple">{comm.icon || '🏘️'}</div>
+      <div className="comm-card-name">{comm.name}</div>
+      <div className="comm-card-meta">
+        <span>{(comm.members || comm.memberCount || 0).toLocaleString()} members</span>
+      </div>
+    </div>
+  );
+
+  if (loading) {
+    return (
+      <div style={{ color: 'var(--text-3,#666)', fontSize: '13px', padding: '20px 0' }}>
+        Loading communities…
+      </div>
+    );
+  }
+
   return (
     <div>
-      <div className="section-header">
-        <div className="section-title">Joined Communities</div>
-        <div
-          className="section-link"
-          style={{ cursor: 'pointer' }}
-          onClick={() => navigate('/discovery')}
-        >
-          View all →
+      {/* My Communities section (created by this user) */}
+      {(createdCommunities || []).length > 0 && (
+        <div style={{ marginBottom: '24px' }}>
+          <div className="section-header">
+            <div className="section-title">My Communities</div>
+            <div
+              className="section-link"
+              style={{ cursor: 'pointer' }}
+              onClick={() => navigate('/create-community')}
+            >
+              Create new →
+            </div>
+          </div>
+          <div className="communities-scroll">
+            {(createdCommunities || []).map((comm) => (
+              <CommunityCard key={comm.id} comm={comm} />
+            ))}
+          </div>
         </div>
-      </div>
-      {loading ? (
-        <div style={{ color: 'var(--text-3,#666)', fontSize: '13px', padding: '20px 0' }}>
-          Loading communities…
+      )}
+
+      {/* Joined Communities section */}
+      <div>
+        <div className="section-header">
+          <div className="section-title">Joined Communities</div>
+          <div
+            className="section-link"
+            style={{ cursor: 'pointer' }}
+            onClick={() => navigate('/discovery')}
+          >
+            Browse more →
+          </div>
         </div>
-      ) : (
         <div className="communities-scroll">
-          {communities.length === 0 && (
+          {joinedOnly.length === 0 && (
             <div style={{ color: 'var(--text-3,#888)', fontSize: '13px', display: 'flex', alignItems: 'center', padding: '0 12px' }}>
               No joined communities yet. Explore communities in Discovery!
             </div>
           )}
-          {communities.map((comm) => (
-            <div
-              key={comm.id}
-              className="comm-card"
-              style={{ cursor: 'pointer' }}
-              onClick={() => navigate(`/community-page?id=${comm.id}`)}
-            >
-              <div className="comm-card-banner banner-purple"></div>
-              <div className="comm-card-icon grad-purple">{comm.icon || '🏘️'}</div>
-              <div className="comm-card-name">{comm.name}</div>
-              <div className="comm-card-meta">
-                <span>{(comm.members || comm.memberCount || 0).toLocaleString()} members</span>
-              </div>
-            </div>
+          {joinedOnly.map((comm) => (
+            <CommunityCard key={comm.id} comm={comm} />
           ))}
           <div
             className="comm-card create-card"
@@ -53,7 +88,7 @@ export default function JoinedCommunities({ communities, loading, navigate }) {
             <div className="comm-card-meta">Start your journey</div>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

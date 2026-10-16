@@ -42,7 +42,7 @@ export default function Appeal() {
               </div>
             </div>
 
-            <ActionDetailsCard />
+            <ActionDetailsCard action={a.action} />
 
             <AppealForm
               APPEAL_TYPES={a.APPEAL_TYPES}

@@ -27,7 +27,7 @@ import { authService } from './services/authService';
 import { getHomeRoute } from './services/roleAccess';
 
 // Protected Route wrapper with role-based access control
-function ProtectedRoute({ children, allowedRoles }) {
+function ProtectedRoute({ children, allowedRoles, allowOwner = false }) {
   const user = authService.getCurrentUser();
 
   if (!user || !user.username) {
@@ -37,7 +37,7 @@ function ProtectedRoute({ children, allowedRoles }) {
   const role = (user.role || 'user').toLowerCase();
 
   // Platform owner is a statistics-only role; redirect away from generic player dashboard
-  if (role === 'owner' && (!allowedRoles || !allowedRoles.includes('owner'))) {
+  if (role === 'owner' && !allowOwner && (!allowedRoles || !allowedRoles.includes('owner'))) {
     return <Navigate to={getHomeRoute(role)} replace />;
   }
 
@@ -89,12 +89,12 @@ export default function App() {
       <Route path="/event-registrants.html" element={<ProtectedRoute><EventRegistrants /></ProtectedRoute>} />
       <Route path="/report" element={<ProtectedRoute><Report /></ProtectedRoute>} />
       <Route path="/report.html" element={<ProtectedRoute><Report /></ProtectedRoute>} />
-      <Route path="/appeal" element={<ProtectedRoute><Appeal /></ProtectedRoute>} />
-      <Route path="/appeal.html" element={<ProtectedRoute><Appeal /></ProtectedRoute>} />
-      <Route path="/profile-settings" element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
-      <Route path="/profile-settings.html" element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
-      <Route path="/user" element={<ProtectedRoute><User /></ProtectedRoute>} />
-      <Route path="/user.html" element={<ProtectedRoute><User /></ProtectedRoute>} />
+      <Route path="/appeal" element={<Appeal />} />
+      <Route path="/appeal.html" element={<Appeal />} />
+      <Route path="/profile-settings" element={<ProtectedRoute allowOwner><ProfileSettings /></ProtectedRoute>} />
+      <Route path="/profile-settings.html" element={<ProtectedRoute allowOwner><ProfileSettings /></ProtectedRoute>} />
+      <Route path="/user" element={<ProtectedRoute allowedRoles={['admin']}><User /></ProtectedRoute>} />
+      <Route path="/user.html" element={<ProtectedRoute allowedRoles={['admin']}><User /></ProtectedRoute>} />
 
       {/* Role-Specific Protected Routes */}
       <Route

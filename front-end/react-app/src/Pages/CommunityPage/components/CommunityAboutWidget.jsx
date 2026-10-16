@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { memberCountOf, onlineCountOf, initialsFromName } from '../../../Components/platform/hooks/useCommunityPage';
+import { apiRequest } from '../../../services/api';
 
 /**
  * Overview tab: pinned announcement, about section, stats grid,
@@ -15,8 +16,7 @@ export default function CommunityAboutWidget({
 
   React.useEffect(() => {
     if (!community?.id) return;
-    fetch(`http://localhost:3000/api/messages?communityId=${community.id}`)
-      .then((res) => (res.ok ? res.json() : []))
+    apiRequest(`/messages?communityId=${community.id}`)
       .then((data) => {
         if (Array.isArray(data)) {
           setMessages(data.slice(-5).reverse());

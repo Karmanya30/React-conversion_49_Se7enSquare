@@ -1,252 +1,160 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  DEFAULT_PRIVACY,
-  DEFAULT_ACCESSIBILITY,
-  MOD_QUIZ_QUESTIONS,
-} from '../data/profileSettingsData';
+import { apiRequest, storeUserSession, clearUserSession } from '../../../services/api';
+import { DEFAULT_PRIVACY, EMPTY_PASSWORDS, EMPTY_ORGANISER, EMPTY_STATEMENT } from '../data/profileSettingsData';
 
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
+const fieldsOf = u => Object.fromEntries(['firstName', 'lastName', 'username', 'email', 'phone', 'bio', 'avatar'].map(k => [k, u[k] ?? '']));
+const errorMessages = err => Array.isArray(err.data?.message) ? err.data.message : [err.message];
 
-function getStoredUser() {
-  try {
-    const raw = JSON.parse(
-      localStorage.getItem('user') ||
-      localStorage.getItem('nexus_user') ||
-      localStorage.getItem('currentUser') ||
-      '{}'
-    );
-    const uName = raw.username || raw.handle || 'user';
-    return {
-      id:        raw.id        || 1,
-      firstName: raw.firstName || raw.name?.split(' ')[0] || (uName ? uName.charAt(0).toUpperCase() + uName.slice(1) : 'User'),
-      lastName:  raw.lastName  || raw.name?.split(' ').slice(1).join(' ') || '',
-      fullName:  raw.fullName  || raw.name || `${raw.firstName || 'User'} ${raw.lastName || ''}`.trim(),
-      username:  uName,
-      handle:    raw.handle    || uName,
-      email:     raw.email     || '',
-      phone:     raw.phone     || '',
-      bio:       raw.bio       || '',
-      avatar:    raw.avatar    || null,
-      role:      raw.role      || 'user',
-      plan:      raw.plan      || 'free',
-      status:    raw.status    || 'Online',
-    };
-  } catch {
-    return {
-      id: 1, firstName: 'User', lastName: '', fullName: 'User',
-      username: 'user', handle: 'user', email: '',
-      phone: '', bio: '', avatar: null, role: 'user', plan: 'free', status: 'Online',
-    };
-  }
-}
-
-/**
- * Manages all state, handlers, and backend interactions for ProfileSettings.
- */
 export default function useProfileSettings() {
   const navigate = useNavigate();
+  const [user, setUser] = useState(null);
+  const [formData, setFormData] = useState(fieldsOf({}));
+  const [privacy, setPrivacy] = useState(DEFAULT_PRIVACY);
+  const [passwords, setPasswords] = useState(EMPTY_PASSWORDS);
+  const [showPassword, setShowPassword] = useState({});
+  const [avatarFile, setAvatarFile] = useState(null);
+  const [avatarPreview, setAvatarPreview] = useState('');
+  const [activeTab, setActiveTab] = useState('profile');
+  const [errors, setErrors] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [toastMsg, setToastMsg] = useState('');
+  const [plan, setPlan] = useState(null);
+  const [organiser, setOrganiser] = useState(null);
+  const [moderator, setModerator] = useState(null);
+  const [applicationErrors, setApplicationErrors] = useState({});
+  const [organiserForm, setOrganiserForm] = useState(EMPTY_ORGANISER);
+  const [statement, setStatement] = useState(EMPTY_STATEMENT);
+  const [questions, setQuestions] = useState([]);
+  const [quizAnswers, setQuizAnswers] = useState([]);
+  const [quizOpen, setQuizOpen] = useState(false);
+  const [applying, setApplying] = useState(false);
 
-  const [user,          setUser]          = useState(getStoredUser);
-  const [formData,      setFormData]      = useState({ ...getStoredUser() });
-  const [isDirty,       setIsDirty]       = useState(false);
-  const [activeTab,     setActiveTab]     = useState('profile');
-  const [toastMsg,      setToastMsg]      = useState(null);
-
-  // Password
-  const [passwords,     setPasswords]     = useState({ current: '', new: '', confirm: '' });
-  const [showPassword,  setShowPassword]  = useState({ current: false, new: false, confirm: false });
-
-  // Privacy & Appearance & Accessibility
-  const [privacy,       setPrivacy]       = useState(DEFAULT_PRIVACY);
-  const [accessibility, setAccessibility] = useState(DEFAULT_ACCESSIBILITY);
-  const [theme,         setTheme]         = useState('dark');
-
-  // Moderator quiz
-  const [quizOpen,      setQuizOpen]      = useState(false);
-  const [quizScore,     setQuizScore]     = useState(null);
-  const [quizAnswers,   setQuizAnswers]   = useState({ q1: '', q2: '', q3: '' });
-
-  const showToast = (msg) => {
-    setToastMsg(msg);
-    setTimeout(() => setToastMsg(null), 3000);
-  };
-
-  const handleInputChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    setIsDirty(true);
-  };
-
-  const handleStatusChange = (status) => {
-    setFormData(prev => ({ ...prev, status }));
-    setIsDirty(true);
-  };
-
-  const handleAvatarUpload = (e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        handleInputChange('avatar', reader.result);
-        showToast('📷 Photo uploaded. Remember to save changes!');
-      };
-      reader.readAsDataURL(file);
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const profile = await apiRequest('/users/me');
+        if (cancelled) return;
+        setUser(profile); setFormData(fieldsOf(profile));
+        setPrivacy({ ...DEFAULT_PRIVACY, ...profile.privacy });
+        const requests = [];
+        if (profile.role !== 'owner') requests.push(['plan', `/subscriptions/status?userId=${profile.id}`, setPlan]);
+        if (['user', 'organizer'].includes(profile.role)) requests.push(['organiser', '/organisers/profile', setOrganiser]);
+        if (['user', 'organizer', 'community_manager', 'moderator'].includes(profile.role)) requests.push(['moderator', '/moderator-certification/status', setModerator]);
+        await Promise.all(requests.map(async ([key, endpoint, setter]) => {
+          try { const data = await apiRequest(endpoint); if (!cancelled) setter(data); }
+          catch (err) { if (!cancelled) setApplicationErrors(prev => ({ ...prev, [key]: err.message })); }
+        }));
+      } catch (err) { if (!cancelled) setErrors(errorMessages(err)); }
+      finally { if (!cancelled) setLoading(false); }
     }
-  };
+    load();
+    return () => { cancelled = true; };
+  }, []);
 
-  const removePhoto = () => {
-    handleInputChange('avatar', null);
-    showToast('🗑️ Photo removed.');
-  };
+  useEffect(() => {
+    if (!avatarFile) { setAvatarPreview(''); return; }
+    const url = URL.createObjectURL(avatarFile);
+    setAvatarPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [avatarFile]);
 
+  const isDirty = Boolean(user && (avatarFile || JSON.stringify(formData) !== JSON.stringify(fieldsOf(user)) ||
+    JSON.stringify(privacy) !== JSON.stringify({ ...DEFAULT_PRIVACY, ...user.privacy }) || Object.values(passwords).some(Boolean)));
+  const canDiscard = isDirty || quizOpen || JSON.stringify(organiserForm) !== JSON.stringify(EMPTY_ORGANISER) ||
+    JSON.stringify(statement) !== JSON.stringify(EMPTY_STATEMENT) || quizAnswers.some(answer => answer !== undefined);
+  const handleInputChange = (field, value) => setFormData(prev => ({ ...prev, [field]: value }));
+  const handleAvatarUpload = e => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(file.type) || file.size > 5 * 1024 * 1024) {
+      setErrors(['avatar: select a PNG, JPG, GIF or WEBP image no larger than 5MB']); return;
+    }
+    setAvatarFile(file); setErrors([]);
+  };
   const discardChanges = () => {
-    setFormData({ ...user });
-    setPasswords({ current: '', new: '', confirm: '' });
-    setIsDirty(false);
-    showToast('Draft discarded.');
+    setFormData(fieldsOf(user)); setPrivacy({ ...DEFAULT_PRIVACY, ...user.privacy });
+    setPasswords(EMPTY_PASSWORDS); setAvatarFile(null); setErrors([]); setShowPassword({});
+    setOrganiserForm(EMPTY_ORGANISER); setStatement(EMPTY_STATEMENT); setQuizAnswers([]); setQuizOpen(false);
+    setToastMsg('Draft discarded.');
   };
 
   const saveAllChanges = async () => {
-    if (!formData.firstName.trim() || !formData.username.trim() || !formData.email.trim()) {
-      showToast('❌ Please fill in required fields (First Name, Username, Email).');
-      return;
+    if (saving || !user) return;
+    const validation = [];
+    if (!formData.firstName.trim()) validation.push('firstName: enter your first name');
+    if (formData.bio !== (user.bio ?? '') && (formData.bio.length < 5 || formData.bio.length > 160)) validation.push('bio: must contain 5 to 160 characters');
+    const changePassword = Object.values(passwords).some(Boolean);
+    if (changePassword) {
+      if (user.hasPassword && !passwords.current) validation.push('current: enter your current password');
+      if (passwords.new.length < 8 || !/[A-Za-z]/.test(passwords.new) || !/\d/.test(passwords.new)) validation.push('new: use at least 8 characters, including a letter and a number');
+      if (passwords.new !== passwords.confirm) validation.push('confirm: passwords do not match');
     }
-
-    const updatedUser = {
-      ...user,
-      ...formData,
-      handle:   formData.username,
-      fullName: `${formData.firstName} ${formData.lastName}`.trim(),
-    };
-
+    setErrors(validation);
+    if (validation.length) return;
+    setSaving(true); setToastMsg('');
+    let profileSaved = false;
     try {
-      const patchBody = {
-        firstName: updatedUser.firstName,
-        lastName: updatedUser.lastName,
-      };
-      if (updatedUser.bio && updatedUser.bio.length >= 5 && updatedUser.bio.length <= 160) {
-        patchBody.bio = updatedUser.bio;
+      const body = Object.fromEntries(Object.entries(formData).filter(([key, value]) => value !== (user[key] ?? '')));
+      body.privacy = privacy;
+      if (avatarFile) {
+        const upload = new FormData(); upload.append('file', avatarFile);
+        const result = await apiRequest('/uploads', { method: 'POST', body: upload });
+        body.avatar = result.fileUrl;
+      } else if (body.avatar === '') body.avatar = null;
+      const saved = await apiRequest('/users/me', { method: 'PATCH', body: JSON.stringify(body) });
+      setUser(saved); setFormData(fieldsOf(saved)); setPrivacy({ ...DEFAULT_PRIVACY, ...saved.privacy });
+      setAvatarFile(null); storeUserSession(saved); profileSaved = true;
+      if (changePassword) {
+        const updated = await apiRequest('/auth/change-password', { method: 'POST', body: JSON.stringify(passwords) });
+        setUser(prev => ({ ...prev, hasPassword: updated.hasPassword }));
+        storeUserSession(updated); setPasswords(EMPTY_PASSWORDS); setShowPassword({});
       }
-      if (updatedUser.phone) {
-        patchBody.phone = updatedUser.phone;
-      }
-      if (updatedUser.avatar && updatedUser.avatar.length <= 300) {
-        patchBody.avatar = updatedUser.avatar;
-      }
-
-      const res = await fetch(`${API_BASE}/users/me`, {
-        method:  'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': String(user.id),
-          'x-role': user.role || 'user',
-        },
-        body: JSON.stringify(patchBody),
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || 'Failed to save profile changes');
-      }
-
-      const savedUser = await res.json();
-      const sessionUser = {
-        id: savedUser.id || user.id,
-        username: savedUser.username || user.username,
-        role: savedUser.role || user.role,
-        name: `${savedUser.firstName || ''} ${savedUser.lastName || ''}`.trim() || user.fullName,
-      };
-      localStorage.setItem('user', JSON.stringify(sessionUser));
-      localStorage.setItem('nexus_user', JSON.stringify(updatedUser));
-      localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-      setUser(updatedUser);
-      setIsDirty(false);
-
-      showToast('✅ Profile & settings saved successfully!');
+      setToastMsg('Profile and settings saved.');
     } catch (err) {
-      showToast(`❌ ${err.message || 'Failed to save changes.'}`);
-    }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('user');
-    localStorage.removeItem('nexus_user');
-    localStorage.removeItem('currentUser');
-    navigate('/login');
+      setErrors(errorMessages(err));
+      if (profileSaved) setToastMsg('Profile saved. Password was not changed; correct the error and save again.');
+    } finally { setSaving(false); }
   };
 
   const applyOrganizer = async () => {
+    if (applying) return;
+    setApplying(true); setApplicationErrors(prev => ({ ...prev, organiser: '' }));
     try {
-      await fetch(`${API_BASE}/organisers/apply`, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json', 'x-role': user.role || 'user' },
-        body:    JSON.stringify({
-          userId:         Number(user.id),
-          experienceNote: 'Community member seeking organizer access',
-        }),
-      });
-      showToast('🏆 Organizer application submitted for admin review!');
-    } catch {
-      showToast('⚠️ Could not submit organizer application');
-    }
+      const data = await apiRequest('/organisers/apply', { method: 'POST', body: JSON.stringify({
+        ...organiserForm, expectedTournamentSize: Number(organiserForm.expectedTournamentSize),
+        pastEventLinks: organiserForm.pastEventLinks.split('\n').map(s => s.trim()).filter(Boolean),
+      }) });
+      setOrganiser(data); setOrganiserForm(EMPTY_ORGANISER);
+    } catch (err) { setApplicationErrors(prev => ({ ...prev, organiser: errorMessages(err).join('; ') })); }
+    finally { setApplying(false); }
   };
-
+  const openQuiz = async () => {
+    setApplicationErrors(prev => ({ ...prev, moderator: '' }));
+    try { setQuestions(await apiRequest('/moderator-certification/quiz')); setQuizAnswers([]); setQuizOpen(true); }
+    catch (err) { setApplicationErrors(prev => ({ ...prev, moderator: err.message })); }
+  };
   const submitQuiz = async () => {
-    if (!quizAnswers.q1 || !quizAnswers.q2 || !quizAnswers.q3) {
-      showToast('⚠️ Please answer all questions.');
-      return;
+    if (applying) return;
+    if (questions.some((_, i) => !Number.isInteger(quizAnswers[i]))) {
+      setApplicationErrors(prev => ({ ...prev, moderator: 'Answer every question.' })); return;
     }
-    const ansMap   = { a: 0, b: 1, c: 2, d: 3 };
-    const ansArray = [ansMap[quizAnswers.q1] || 0, ansMap[quizAnswers.q2] || 0, ansMap[quizAnswers.q3] || 0];
-
+    setApplying(true); setApplicationErrors(prev => ({ ...prev, moderator: '' }));
     try {
-      const res = await fetch(`${API_BASE}/moderator-certification/apply`, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json', 'x-role': user.role || 'user' },
-        body:    JSON.stringify({ userId: Number(user.id), answers: ansArray }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setQuizScore(data.score !== undefined ? data.score : 3);
-        showToast('🎉 Application submitted for admin review!');
-        return;
-      }
-    } catch {}
-
-    const correct = MOD_QUIZ_QUESTIONS.reduce(
-      (sum, q) => sum + (quizAnswers[q.key] === q.correct ? 1 : 0),
-      0
-    );
-    setQuizScore(correct);
-    showToast(correct >= 2
-      ? '🎉 Quiz passed! Application forwarded to admins.'
-      : '❌ Quiz not passed. Please review policies and try again.'
-    );
+      const data = await apiRequest('/moderator-certification/apply', { method: 'POST', body: JSON.stringify({ answers: quizAnswers,
+        statement: { ...statement, weeklyHours: Number(statement.weeklyHours) } }) });
+      setModerator(data); setQuizOpen(false); setStatement(EMPTY_STATEMENT); setQuizAnswers([]);
+    } catch (err) { setApplicationErrors(prev => ({ ...prev, moderator: errorMessages(err).join('; ') })); }
+    finally { setApplying(false); }
   };
-
+  const handleLogout = () => { clearUserSession(); navigate('/login'); };
   const initials = `${formData.firstName?.[0] || ''}${formData.lastName?.[0] || ''}`.toUpperCase() || 'U';
-
-  return {
-    // Navigation
-    navigate,
-    // User & form
-    user, formData, isDirty, initials,
-    // Tab
-    activeTab, setActiveTab,
-    // Password
-    passwords, setPasswords, showPassword, setShowPassword,
-    // Toggleable settings
-    privacy, setPrivacy,
-    accessibility, setAccessibility,
-    theme, setTheme,
-    // Quiz
-    quizOpen, setQuizOpen, quizScore, quizAnswers, setQuizAnswers,
-    // Toast
-    toastMsg, showToast,
-    // Handlers
-    handleInputChange, handleStatusChange,
-    handleAvatarUpload, removePhoto,
-    discardChanges, saveAllChanges,
-    handleLogout, applyOrganizer, submitQuiz,
-  };
+  return { user, formData, privacy, setPrivacy, passwords, setPasswords, showPassword, setShowPassword,
+    activeTab, setActiveTab, isDirty, canDiscard, loading, saving, errors, toastMsg, initials, avatarPreview,
+    handleInputChange, handleAvatarUpload, removePhoto: () => { setAvatarFile(null); handleInputChange('avatar', ''); },
+    discardChanges, saveAllChanges, handleLogout, navigate, showToast: setToastMsg,
+    plan, organiser, moderator, applicationErrors, organiserForm, setOrganiserForm, statement, setStatement,
+    questions, quizAnswers, setQuizAnswers, quizOpen, openQuiz, applying, applyOrganizer, submitQuiz };
 }

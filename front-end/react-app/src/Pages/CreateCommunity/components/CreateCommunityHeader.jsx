@@ -1,11 +1,14 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { authService } from '../../../services/authService';
+import { getHomeRoute } from '../../../services/roleAccess';
 
 /**
  * CreateCommunity page header: title, breadcrumb navigation, and progress bar.
  */
 export default function CreateCommunityHeader({ activeTab, currentStep }) {
   const navigate = useNavigate();
+  const user = authService.getCurrentUser();
 
   return (
     <>
@@ -14,7 +17,7 @@ export default function CreateCommunityHeader({ activeTab, currentStep }) {
         <div className="breadcrumb">
           <span
             className="bc-link"
-            onClick={() => navigate('/dashboard')}
+            onClick={() => navigate(getHomeRoute(user?.role))}
             style={{ cursor: 'pointer', textDecoration: 'none' }}
           >
             Home

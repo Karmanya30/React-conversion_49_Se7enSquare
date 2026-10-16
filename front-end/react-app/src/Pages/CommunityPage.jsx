@@ -1,6 +1,8 @@
 import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import useCommunityPage, { memberCountOf } from '../Components/platform/hooks/useCommunityPage';
+import { authService } from '../services/authService';
+import { getHomeRoute } from '../services/roleAccess';
 import CommunityBanner from './CommunityPage/components/CommunityBanner';
 import CommunityNav from './CommunityPage/components/CommunityNav';
 import CommunityAboutWidget from './CommunityPage/components/CommunityAboutWidget';
@@ -78,7 +80,7 @@ export default function CommunityPage() {
         <div className="breadcrumb">
           <button className="breadcrumb-link" onClick={() => navigate('/discovery')}>Discover</button>
           <span className="sep">›</span>
-          <button className="breadcrumb-link" onClick={() => navigate('/dashboard')}>Dashboard</button>
+          <button className="breadcrumb-link" onClick={() => navigate(getHomeRoute(authService.getCurrentUser()?.role))}>Dashboard</button>
           <span className="sep">›</span>
           <span className="current" id="breadcrumbCommunityName">{community.name}</span>
         </div>
@@ -112,6 +114,7 @@ export default function CommunityPage() {
           community={community}
           channelEntries={channelEntries}
           joined={joined}
+          isOwner={isOwner}
           onLockedClick={() => showToast('🔒 Join this community first to access channels!')}
         />
       )}

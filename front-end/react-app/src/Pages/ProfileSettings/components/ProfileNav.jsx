@@ -10,13 +10,7 @@ const NAV_SECTIONS = [
       { tab: 'privacy',      icon: '🔒', label: 'Privacy' },
     ],
   },
-  {
-    label: 'App',
-    items: [
-      { tab: 'appearance',   icon: '🎨', label: 'Appearance' },
-      { tab: 'accessibility',icon: '♿', label: 'Accessibility' },
-    ],
-  },
+
 ];
 
 /**
@@ -46,9 +40,7 @@ export default function ProfileNav({ formData, initials, activeTab, onSelectTab 
         <div style={{ textAlign: 'center' }}>
           <div className="profile-name user-name">{formData.firstName} {formData.lastName}</div>
           <div className="profile-handle">@{formData.username}</div>
-          <div className="profile-status" style={{ justifyContent: 'center', marginTop: '4px' }}>
-            {formData.status || 'Online'}
-          </div>
+
         </div>
       </div>
 

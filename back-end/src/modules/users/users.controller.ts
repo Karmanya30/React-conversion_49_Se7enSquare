@@ -99,8 +99,8 @@ export class UsersController {
   @ApiQuery({ name: 'search', required: false, description: 'Filter users by username, email or name' })
   @ApiOkResponse({ type: UserDto, isArray: true, description: 'Array of sanitized user records' })
   @ApiForbiddenResponse({ description: 'Missing or invalid role/identity' })
-  findAll(@Query('search') search?: string) {
-    return this.usersService.findAll(search);
+  findAll(@CurrentUser() viewer: UserRecord, @Query('search') search?: string, @Query('communityId') communityId?: string, @Query('reportId') reportId?: string) {
+    return this.usersService.findAll(search, viewer, communityId ? Number(communityId) : undefined, reportId ? Number(reportId) : undefined);
   }
 
   @Get(':id')
@@ -112,8 +112,8 @@ export class UsersController {
   @ApiParam({ name: 'id', type: Number, description: 'Numeric user ID' })
   @ApiOkResponse({ type: UserDto, description: 'The matching user record' })
   @ApiNotFoundResponse({ description: 'User not found' })
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.usersService.findOne(id);
+  findOne(@Param('id', ParseIntPipe) id: number, @CurrentUser() viewer: UserRecord, @Query('reportId') reportId?: string) {
+    return this.usersService.findOne(id, viewer, reportId ? Number(reportId) : undefined);
   }
 
   @Post()

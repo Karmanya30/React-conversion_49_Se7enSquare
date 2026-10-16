@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { ApplyOrganiserDto } from './dto/apply-organiser.dto';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { db, nextId, OrganiserPlan, OrganiserRecord, OrganiserStatus, saveDb } from '../../common/utils/in-memory-db';
 import { AppRole } from '../rbac/role.enum';
 import { PaymentsService, SIMULATED_PRICES } from '../payments/payments.service';
@@ -31,7 +32,8 @@ export class OrganisersService {
     });
   }
 
-  apply(userId: number, experienceNote?: string): OrganiserRecord {
+  apply(userId: number, payload: ApplyOrganiserDto): OrganiserRecord {
+    if (db.users.find(u => u.id === userId)?.role !== AppRole.USER) throw new ForbiddenException('Only users may apply to become an organizer');
     const existing = this.findByUserId(userId);
     if (existing && existing.status !== 'rejected') {
       throw new BadRequestException(`User ${userId} already has a ${existing.status} organiser application`);
@@ -42,7 +44,9 @@ export class OrganisersService {
       userId,
       status: 'pending',
       plan: 'free',
-      experienceNote,
+      experienceNote: payload.experienceNote, games: payload.games,
+      organisations: payload.organisations, pastEventLinks: payload.pastEventLinks,
+      expectedTournamentSize: payload.expectedTournamentSize, rulesAgreement: payload.rulesAgreement,
       appliedAt: new Date().toISOString(),
     };
     db.organisers.push(created);
@@ -50,11 +54,13 @@ export class OrganisersService {
     return created;
   }
 
-  setStatus(id: number, status: OrganiserStatus): OrganiserRecord {
+  setStatus(id: number, status: OrganiserStatus, rejectionReason?: string): OrganiserRecord {
     const record = db.organisers.find((item) => item.id === id);
     if (!record) {
       throw new NotFoundException(`Organiser application ${id} not found`);
     }
+    if (status === 'rejected' && !rejectionReason?.trim()) throw new BadRequestException('rejectionReason is required');
+    record.rejectionReason = status === 'rejected' ? rejectionReason : undefined;
     record.status = status;
     if (status === 'verified') {
       record.verifiedAt = new Date().toISOString();
@@ -69,6 +75,7 @@ export class OrganisersService {
     const plan = record?.plan || 'free';
     return {
       status: record?.status || 'none',
+      rejectionReason: record?.rejectionReason,
       plan,
       appliedAt: record?.appliedAt,
       verifiedAt: record?.verifiedAt,

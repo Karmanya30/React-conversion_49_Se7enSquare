@@ -150,15 +150,31 @@ export default function Login() {
                   border: '1px solid rgba(239, 68, 68, 0.35)',
                   color: '#fca5a5',
                   borderRadius: '8px',
-                  padding: '10px 14px',
+                  padding: '12px 14px',
                   fontSize: '13px',
                   marginBottom: '16px',
                   display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
+                  flexDirection: 'column',
+                  gap: '6px'
                 }}>
-                  <span>⚠️</span>
-                  <span>{loginErrors.general}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span>⚠️</span>
+                    <span>{loginErrors.general}</span>
+                  </div>
+                  {(loginErrors.isSanctioned || (typeof window !== 'undefined' && window.location.search.includes('accountStatus'))) && (
+                    <Link
+                      to="/appeal"
+                      style={{
+                        color: '#93c5fd',
+                        textDecoration: 'underline',
+                        fontSize: '12px',
+                        marginLeft: '24px',
+                        fontWeight: 600,
+                      }}
+                    >
+                      Submit an Appeal →
+                    </Link>
+                  )}
                 </div>
               )}
 

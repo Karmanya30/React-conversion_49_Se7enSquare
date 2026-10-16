@@ -50,6 +50,22 @@ export default function UserTable({ loading, filteredUsers, navigate }) {
                       {u.username?.slice(0, 2).toUpperCase()}
                     </div>
                     <div className="row-name">@{u.username}</div>
+                    {u.status && u.status !== 'active' && (
+                      <span
+                        style={{
+                          fontSize: '10px',
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          background: u.status === 'banned' ? '#ef4444' : '#f59e0b',
+                          color: '#fff',
+                          textTransform: 'uppercase',
+                          fontWeight: 700,
+                          marginLeft: '8px',
+                        }}
+                      >
+                        {u.status}
+                      </span>
+                    )}
                   </div>
                 </td>
                 <td style={{ color: 'var(--text-2, #aaa)' }}>{u.email}</td>

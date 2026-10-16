@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 
 /**
  * Channels tab: lists all community channels.
- * Members who have joined can click into the chat; non-members see a locked state.
+ * Members who have joined (or the community owner) can click into the chat;
+ * non-members see a locked state.
  */
-export default function PostFeed({ community, channelEntries, joined, onLockedClick }) {
+export default function PostFeed({ community, channelEntries, joined, isOwner, onLockedClick }) {
   const navigate = useNavigate();
 
   return (
@@ -18,7 +19,7 @@ export default function PostFeed({ community, channelEntries, joined, onLockedCl
             channelEntries.map((ch, i) => {
               const chanName = ch.name || `channel-${i}`;
               const isVoice = ch.type === 'Voice';
-              if (joined) {
+              if (joined || isOwner) {
                 return (
                   <div
                     key={ch.id || chanName}

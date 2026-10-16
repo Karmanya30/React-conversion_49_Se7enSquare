@@ -100,12 +100,17 @@ export default function useCommunityPage(id, navigate) {
     setTimeout(() => setToastMsg((cur) => (cur === msg ? null : cur)), 3000);
   };
 
+  const authHeaders = {
+    'x-role': user.role,
+    ...(user.id ? { 'x-user-id': String(user.id) } : {}),
+  };
+
   useEffect(() => {
     let cancelled = false;
     async function fetchCommunity() {
       setLoading(true);
       try {
-        const commRes = await fetch(`${API_BASE}/communities/${id}`, { headers: { 'x-role': user.role } });
+        const commRes = await fetch(`${API_BASE}/communities/${id}`, { headers: authHeaders });
         if (cancelled) return;
         if (commRes.ok) {
           const data = await commRes.json();
@@ -118,7 +123,7 @@ export default function useCommunityPage(id, navigate) {
       } catch {
         if (!cancelled) {
           setCommunity(null);
-          setLoadError('Could not reach the backend (http://localhost:3000). Is the NestJS server running?');
+          setLoadError('Could not reach the backend. Is the NestJS server running?');
         }
       }
       if (!cancelled) setLoading(false);
@@ -127,7 +132,7 @@ export default function useCommunityPage(id, navigate) {
       // reconciled with the server's membership list.
       if (user.id) {
         try {
-          const memsRes = await fetch(`${API_BASE}/memberships?userId=${user.id}`, { headers: { 'x-role': user.role } });
+          const memsRes = await fetch(`${API_BASE}/memberships?userId=${user.id}`, { headers: authHeaders });
           if (!cancelled && memsRes.ok) {
             const mems = await memsRes.json();
             if (Array.isArray(mems)) {
@@ -146,7 +151,7 @@ export default function useCommunityPage(id, navigate) {
     async function fetchPageData() {
       if (!community?.id) return;
       try {
-        const eventsRes = await fetch(`${API_BASE}/events`, { headers: { 'x-role': user.role } });
+        const eventsRes = await fetch(`${API_BASE}/events`, { headers: authHeaders });
         if (!cancelled && eventsRes.ok) {
           const all = await eventsRes.json();
           if (Array.isArray(all)) {
@@ -159,8 +164,8 @@ export default function useCommunityPage(id, navigate) {
 
       try {
         const [memsRes, usersRes] = await Promise.all([
-          fetch(`${API_BASE}/memberships?communityId=${community.id}`, { headers: { 'x-role': user.role } }),
-          fetch(`${API_BASE}/users`, { headers: { 'x-role': user.role } }),
+          fetch(`${API_BASE}/memberships?communityId=${community.id}`, { headers: authHeaders }),
+          fetch(`${API_BASE}/users?communityId=${community.id}`, { headers: authHeaders }),
         ]);
         if (cancelled) return;
         const mems = memsRes.ok ? await memsRes.json() : [];
@@ -172,8 +177,10 @@ export default function useCommunityPage(id, navigate) {
           const isMod = !isOwner && (u?.role === 'moderator' || u?.role === 'community_manager');
           return {
             userId: m.userId,
-            name: u ? (u.username || u.email) : `User #${m.userId}`,
+            name: u ? (u.fullName || u.username) : `User #${m.userId}`,
+            avatar: u?.avatar,
             role: isOwner ? 'owner' : (isMod ? 'moderator' : 'member'),
+            status: u?.status || 'active',
           };
         }));
       } catch {
@@ -197,7 +204,7 @@ export default function useCommunityPage(id, navigate) {
       if (next) {
         const res = await fetch(`${API_BASE}/memberships`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-role': user.role },
+          headers: { 'Content-Type': 'application/json', 'x-role': user.role, ...(user.id ? { 'x-user-id': String(user.id) } : {}) },
           body: JSON.stringify({ userId: Number(user.id), communityId: Number(community.id) }),
         });
         if (!res.ok) {
@@ -207,7 +214,7 @@ export default function useCommunityPage(id, navigate) {
         }
         showToast(`Welcome to ${community.name}! 🚀`);
       } else {
-        const memsRes = await fetch(`${API_BASE}/memberships?userId=${user.id}`, { headers: { 'x-role': user.role } });
+        const memsRes = await fetch(`${API_BASE}/memberships?userId=${user.id}`, { headers: { 'x-role': user.role, ...(user.id ? { 'x-user-id': String(user.id) } : {}) } });
         if (!memsRes.ok) throw new Error(await apiErrorMessage(memsRes));
         const mems = await memsRes.json();
         const target = Array.isArray(mems)
@@ -216,7 +223,7 @@ export default function useCommunityPage(id, navigate) {
         if (target) {
           const delRes = await fetch(`${API_BASE}/memberships/${target.id}`, {
             method: 'DELETE',
-            headers: { 'x-role': user.role },
+            headers: { 'x-role': user.role, ...(user.id ? { 'x-user-id': String(user.id) } : {}) },
           });
           if (!delRes.ok) throw new Error(await apiErrorMessage(delRes));
         }
@@ -235,7 +242,7 @@ export default function useCommunityPage(id, navigate) {
     try {
       const res = await fetch(`${API_BASE}/communities/${community.id}`, {
         method: 'DELETE',
-        headers: { 'x-role': user.role },
+        headers: { 'x-role': user.role, ...(user.id ? { 'x-user-id': String(user.id) } : {}) },
       });
       if (!res.ok) {
         showToast(`⚠️ Could not delete community: ${await apiErrorMessage(res)}`);

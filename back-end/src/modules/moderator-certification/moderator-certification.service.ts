@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { ModeratorStatementDto } from './dto/submit-quiz.dto';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { db, ModeratorApplicationRecord, ModeratorApplicationStatus, nextId, saveDb } from '../../common/utils/in-memory-db';
 import { AppRole } from '../rbac/role.enum';
 import { UsersService } from '../users/users.service';
@@ -58,7 +59,9 @@ export class ModeratorCertificationService {
     });
   }
 
-  submitQuiz(userId: number, answers: number[]): ModeratorApplicationRecord {
+  submitQuiz(userId: number, answers: number[], statement: ModeratorStatementDto): ModeratorApplicationRecord {
+    const user = db.users.find(u => u.id === userId);
+    if (!user || ![AppRole.USER, AppRole.ORGANIZER, AppRole.COMMUNITY_MANAGER].includes(user.role)) throw new ForbiddenException('This role cannot apply for moderator certification');
     const existing = this.findByUserId(userId);
     if (existing && existing.status !== 'rejected') {
       throw new BadRequestException(`User ${userId} already has a ${existing.status} moderator application`);
@@ -67,6 +70,8 @@ export class ModeratorCertificationService {
       throw new BadRequestException(`Expected ${QUIZ.length} answers, got ${answers.length}`);
     }
 
+    if (!statement?.why?.trim() || !statement.timeZone || !statement.weeklyHours) throw new BadRequestException('statement is required');
+    if (answers.some((a, i) => !Number.isInteger(a) || a < 0 || a >= QUIZ[i].options.length)) throw new BadRequestException('answers contain an invalid option');
     const correct = QUIZ.reduce((count, q, i) => count + (q.answerIndex === answers[i] ? 1 : 0), 0);
     const quizScore = Math.round((correct / QUIZ.length) * 100);
 
@@ -74,7 +79,8 @@ export class ModeratorCertificationService {
       id: nextId('moderatorApplication'),
       userId,
       status: quizScore >= PASSING_SCORE ? 'pending' : 'rejected',
-      quizScore,
+      quizScore, passMark: PASSING_SCORE, answers, statement,
+      rejectionReason: quizScore < PASSING_SCORE ? 'Quiz score below the pass mark' : undefined,
       appliedAt: new Date().toISOString(),
     };
     db.moderatorApplications.push(created);
@@ -82,11 +88,13 @@ export class ModeratorCertificationService {
     return created;
   }
 
-  setStatus(id: number, status: ModeratorApplicationStatus): ModeratorApplicationRecord {
+  setStatus(id: number, status: ModeratorApplicationStatus, rejectionReason?: string): ModeratorApplicationRecord {
     const record = db.moderatorApplications.find((item) => item.id === id);
     if (!record) {
       throw new NotFoundException(`Moderator application ${id} not found`);
     }
+    if (status === 'rejected' && !rejectionReason?.trim()) throw new BadRequestException('rejectionReason is required');
+    record.rejectionReason = status === 'rejected' ? rejectionReason : undefined;
     record.status = status;
     if (status === 'certified') {
       record.certifiedAt = new Date().toISOString();
@@ -100,7 +108,7 @@ export class ModeratorCertificationService {
     const record = this.findByUserId(userId);
     return {
       status: record?.status || 'none',
-      quizScore: record?.quizScore,
+      quizScore: record?.quizScore, passMark: record?.passMark ?? PASSING_SCORE, rejectionReason: record?.rejectionReason,
       appliedAt: record?.appliedAt,
       certifiedAt: record?.certifiedAt,
     };

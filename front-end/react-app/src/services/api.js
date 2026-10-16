@@ -27,6 +27,7 @@ export function getStoredUser() {
  * Clears authenticated session from localStorage.
  */
 export function clearUserSession() {
+  localStorage.removeItem('user');
   localStorage.removeItem('nexus_user');
   localStorage.removeItem('currentUser');
   localStorage.removeItem('role');
@@ -52,9 +53,11 @@ export function storeUserSession(user) {
     status: user.status || 'active',
   };
 
+  localStorage.removeItem('user');
   localStorage.setItem('nexus_user', JSON.stringify(safeSession));
   localStorage.setItem('currentUser', JSON.stringify(safeSession));
   localStorage.setItem('role', safeSession.role);
+  window.dispatchEvent(new Event('session-updated'));
 }
 
 /**
@@ -69,7 +72,7 @@ export async function apiRequest(endpoint, options = {}) {
     : `${API_BASE}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
 
   const headers = {
-    'Content-Type': 'application/json',
+    ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
     'x-role': role,
     ...(user?.id ? { 'x-user-id': String(user.id) } : {}),
     ...(options.headers || {}),

@@ -1,19 +1,12 @@
-import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { ArrayMinSize, IsArray, IsInt, Min } from 'class-validator';
-
+import { ArrayMinSize, IsArray, IsInt, IsOptional, IsString, Length, Min, Max, ValidateNested } from 'class-validator';
+export class ModeratorStatementDto {
+  @IsString() @Length(20, 1000) why!: string;
+  @IsString() @Length(2, 80) timeZone!: string;
+  @Type(() => Number) @IsInt() @Min(1) @Max(168) weeklyHours!: number;
+}
 export class SubmitQuizDto {
-  @ApiProperty({ example: 4 })
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  userId!: number;
-
-  @ApiProperty({
-    example: [1, 0, 2, 1, 0],
-    description: 'Zero-indexed selected option per question, in the order returned by GET /moderator-certification/quiz',
-  })
-  @IsArray()
-  @ArrayMinSize(1)
-  answers!: number[];
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) userId?: number;
+  @IsArray() @ArrayMinSize(1) @IsInt({ each: true }) @Min(0, { each: true }) answers!: number[];
+  @ValidateNested() @Type(() => ModeratorStatementDto) statement!: ModeratorStatementDto;
 }

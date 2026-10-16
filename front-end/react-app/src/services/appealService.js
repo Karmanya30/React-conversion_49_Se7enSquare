@@ -1,6 +1,6 @@
 /**
  * Appeal Service Module
- * Handles loading, creating, and submitting evidence for appeals.
+ * Handles loading, creating, reviewing, and submitting evidence for appeals.
  */
 import { apiRequest } from './api';
 
@@ -14,6 +14,12 @@ export const appealService = {
     return await apiRequest('/appeals', {
       method: 'POST',
       body: JSON.stringify(payload),
+    });
+  },
+
+  async reviewAppeal(appealId, status) {
+    return await apiRequest(`/appeals/${appealId}/${status}`, {
+      method: 'POST',
     });
   },
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import SideBar from '../Components/SideBar';
-import useOwnerDashboard from '../Components/platform/hooks/useOwnerDashboard';
+import useOwnerDashboard from './OwnerDashboard/hooks/useOwnerDashboard';
 import OwnerHeader from './OwnerDashboard/components/OwnerHeader';
 import OwnerMetricsGrid from './OwnerDashboard/components/OwnerMetricsGrid';
 import RecentActivityList from './OwnerDashboard/components/RecentActivityList';

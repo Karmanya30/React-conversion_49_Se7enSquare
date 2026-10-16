@@ -5,7 +5,7 @@ import {
   DEFAULT_MODERATOR_APPS,
 } from '../data/adminData';
 
-const API_BASE = 'http://localhost:3000/api';
+import { appealService } from '../../../services/appealService';
 
 /**
  * Custom hook managing communities, reports queue, appeals, events, and applications.
@@ -39,10 +39,7 @@ export default function useAdminModeration(adminUser, showToast, addAuditLog) {
     addAuditLog(`${status === 'approved' ? 'Approved' : 'Rejected'} appeal #${appealId}`, 'appeal');
     showToast(`✓ Appeal ${status}`);
     try {
-      await fetch(`${API_BASE}/appeals/${appealId}/${status}`, {
-        method: 'POST',
-        headers: { 'x-role': adminUser.role },
-      });
+      await appealService.reviewAppeal(appealId, status);
     } catch {}
   };
 

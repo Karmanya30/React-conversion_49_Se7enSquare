@@ -3,7 +3,7 @@ import SideBar from '../Components/SideBar';
 import '../styles/global.css';
 import '../styles/sidebar.css';
 import '../styles/mod-panel.css';
-import useModPanel       from '../Components/platform/hooks/useModPanel';
+import useModPanel       from './ModPanel/hooks/useModPanel';
 import ModHeader         from './ModPanel/components/ModHeader';
 import ReportQueueList   from './ModPanel/components/ReportQueueList';
 import ReportDetailView  from './ModPanel/components/ReportDetailView';

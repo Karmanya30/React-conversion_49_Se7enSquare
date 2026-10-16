@@ -29,19 +29,31 @@ export default function CommunityBanner({ community, joined, isOwner, foundedLab
           </div>
         </div>
         <div className="comm-actions">
-          <button
-            className={`btn-joined-main${joined ? '' : ' not-joined'}`}
-            id="joinMainBtn"
-            onClick={onToggleJoin}
-            style={{
-              background: joined ? 'rgba(99,102,241,0.2)' : '#6366f1',
-              border: joined ? '1px solid #6366f1' : 'none',
-              color: '#fff', borderRadius: '10px', padding: '10px 20px',
-              fontWeight: 600, cursor: 'pointer', fontSize: '14px',
-            }}
-          >
-            {joined ? '✓ Joined' : '+ Join Community'}
-          </button>
+          {/* Community owner sees Settings + Delete; others see Join/Leave */}
+          {!isOwner && (
+            <button
+              className={`btn-joined-main${joined ? '' : ' not-joined'}`}
+              id="joinMainBtn"
+              onClick={onToggleJoin}
+              style={{
+                background: joined ? 'rgba(99,102,241,0.2)' : '#6366f1',
+                border: joined ? '1px solid #6366f1' : 'none',
+                color: '#fff', borderRadius: '10px', padding: '10px 20px',
+                fontWeight: 600, cursor: 'pointer', fontSize: '14px',
+              }}
+            >
+              {joined ? '✓ Joined' : '+ Join Community'}
+            </button>
+          )}
+          {isOwner && (
+            <span style={{
+              background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.4)',
+              color: '#818cf8', borderRadius: '10px', padding: '10px 16px',
+              fontWeight: 600, fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px',
+            }}>
+              👑 Creator
+            </span>
+          )}
           {isOwner && (
             <Link
               to={`/community-settings/${community.id}`}

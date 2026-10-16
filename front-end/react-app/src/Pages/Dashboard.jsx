@@ -58,6 +58,7 @@ export default function Dashboard() {
             events={events}
             stats={stats}
             communities={communities}
+            createdCommunities={createdCommunities}
           />
 
           <JoinedCommunities

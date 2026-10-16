@@ -2,6 +2,8 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { memberCountOf, onlineCountOf, initialsFromName } from '../../../Components/platform/hooks/useCommunityPage';
 
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
+
 /**
  * Overview tab: pinned announcement, about section, stats grid,
  * recent messages feed, active events sidebar, and created-by card.
@@ -15,7 +17,7 @@ export default function CommunityAboutWidget({
 
   React.useEffect(() => {
     if (!community?.id) return;
-    fetch(`http://localhost:3000/api/messages?communityId=${community.id}`)
+    fetch(`${API_BASE}/messages?communityId=${community.id}`)
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => {
         if (Array.isArray(data)) {

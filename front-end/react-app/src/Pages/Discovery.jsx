@@ -10,6 +10,8 @@ import '../styles/discovery.css';
 
 /**
  * Discovery Page — thin orchestrator.
+ * Layout mirrors discovery.html:
+ *   .app-shell > [SideBar] + .main > [header.header] + .content > [.hero + .filter-bar + .body-area]
  * All state, filtering, sorting and join/leave logic lives in useDiscovery().
  */
 export default function Discovery() {
@@ -26,20 +28,22 @@ export default function Discovery() {
   } = useDiscovery();
 
   return (
-    <div className="app-shell">
+    <div className="app-shell discovery-shell">
       <SideBar />
       <div className="main">
-        <DiscoveryHeader
-          search={search}
-          onSearchChange={setSearch}
-          communities={communities}
-          totalMembers={totalMembers}
-          totalOnline={totalOnline}
-          eventCount={eventCount}
-          loadWarning={loadWarning}
-        />
+        <DiscoveryHeader />
 
-        <div className="content">
+        <div className="content discovery-content">
+          <DiscoveryHero
+            search={search}
+            onSearchChange={setSearch}
+            communities={communities}
+            totalMembers={totalMembers}
+            totalOnline={totalOnline}
+            eventCount={eventCount}
+            loadWarning={loadWarning}
+          />
+
           <CategoryFilterBar
             categories={categories}
             activeCategory={activeCategory}
@@ -71,5 +75,49 @@ export default function Discovery() {
         </div>
       )}
     </div>
+  );
+}
+
+/* ── Inline Hero (lives inside .content, not in the header) ── */
+function DiscoveryHero({ search, onSearchChange, communities, totalMembers, totalOnline, eventCount, loadWarning }) {
+  const fmtStat = (n) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n));
+
+  return (
+    <>
+      <div className="hero">
+        <div className="hero-title">
+          Find your next <span>community</span>
+        </div>
+        <div className="hero-sub">Browse 50,000+ communities across every interest, topic, and niche.</div>
+        <div className="search-bar">
+          <span className="search-icon">🔍</span>
+          <input
+            id="searchInput"
+            type="text"
+            placeholder="Search by name, topic, or keyword…"
+            value={search}
+            onChange={e => onSearchChange(e.target.value)}
+          />
+          <span className="search-kbd">⌘K</span>
+          <button className="search-btn">Search</button>
+        </div>
+        <div className="hero-stats">
+          <div className="h-stat">🏘️ <strong>{communities.length.toLocaleString()}</strong>&nbsp;communities</div>
+          <div className="h-stat">👥 <strong>{fmtStat(totalMembers)}</strong>&nbsp;members</div>
+          <div className="h-stat">🟢 <strong>{totalOnline.toLocaleString()}</strong>&nbsp;online now</div>
+          <div className="h-stat">📅 <strong>{eventCount !== null ? eventCount.toLocaleString() : '1,400+'}</strong>&nbsp;events this week</div>
+        </div>
+      </div>
+
+      {loadWarning && (
+        <div style={{
+          margin: '10px 32px 0', padding: '10px 14px', fontSize: '13px',
+          background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.35)',
+          borderRadius: '10px', color: '#fbbf24',
+        }}>
+          ⚠️ {loadWarning}
+        </div>
+      )}
+    </>
   );
 }

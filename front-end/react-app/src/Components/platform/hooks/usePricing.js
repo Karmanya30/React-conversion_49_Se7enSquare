@@ -1,34 +1,64 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { PLANS, PLAN_RANK } from '../data/pricingPlans';
-import { getPlatformUser } from '../utils/platformStorage';
+import { getStoredUser, apiRequest } from '../../../services/api';
 import useToast from './useToast';
 
-const API_BASE = 'http://localhost:3000/api';
-
 /**
- * Custom hook managing all Pricing page state and network actions.
+ * Custom hook managing all Pricing page state, RBAC, and network actions.
  */
 export default function usePricing() {
-  const [user] = useState(getPlatformUser);
+  const navigate = useNavigate();
+  const [user] = useState(() => getStoredUser());
   const [currentPlan, setCurrentPlan] = useState('free');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast, showToast } = useToast();
 
+  const isOwner = user?.role === 'owner';
+
+  const fetchStatus = useCallback(async () => {
+    if (!user || !user.id || isOwner) {
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const data = await apiRequest(`/subscriptions/status?userId=${user.id}`);
+      if (data && data.plan) {
+        setCurrentPlan(data.plan);
+      }
+    } catch (err) {
+      showToast('❌', err.message || 'Failed to load subscription status');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user, isOwner, showToast]);
+
   useEffect(() => {
-    fetch(`${API_BASE}/subscriptions/status?userId=${user.id}`, {
-      headers: { 'x-role': user.role },
-    })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (data && data.plan) {
-          setCurrentPlan(data.plan);
-        }
-      })
-      .catch(() => {});
-  }, [user.id, user.role]);
+    fetchStatus();
+  }, [fetchStatus]);
 
   const handlePlanChange = async (planId) => {
+    if (!user || !user.id) {
+      showToast('⚠️', 'Please log in to manage your subscription.');
+      navigate('/login');
+      return;
+    }
+
+    if (isOwner) {
+      showToast('ℹ️', 'Platform Owner account cannot subscribe to individual tiers.');
+      return;
+    }
+
     const targetPlan = PLANS.find((p) => p.id === planId);
     if (!targetPlan) return;
+
+    if (planId === currentPlan) {
+      showToast('ℹ️', `You are already on the ${targetPlan.name} plan.`);
+      return;
+    }
 
     const isDowngrade = PLAN_RANK[planId] < PLAN_RANK[currentPlan];
 
@@ -39,56 +69,73 @@ export default function usePricing() {
       if (!confirmed) return;
     }
 
+    setIsSubmitting(true);
     try {
-      const res = await fetch(`${API_BASE}/subscriptions/upgrade`, {
+      const res = await apiRequest('/subscriptions/upgrade', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-role': user.role,
-        },
         body: JSON.stringify({ userId: Number(user.id), plan: planId }),
       });
-      if (res.ok) {
-        setCurrentPlan(planId);
-        showToast('✅', `Now on the ${targetPlan.name} plan`);
-      } else {
-        showToast('⚠️', 'Could not update subscription plan.');
+
+      if (res && res.plan) {
+        setCurrentPlan(res.plan);
       }
-    } catch {
-      showToast('⚠️', 'Could not update subscription plan.');
+      showToast('✅', `Now on the ${targetPlan.name} plan`);
+      await fetchStatus();
+    } catch (err) {
+      showToast('❌', err.message || 'Failed to update subscription');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleCancelSubscription = async () => {
+    if (!user || !user.id) {
+      showToast('⚠️', 'Please log in to manage your subscription.');
+      navigate('/login');
+      return;
+    }
+
+    if (isOwner) {
+      showToast('ℹ️', 'Platform Owner account cannot subscribe to individual tiers.');
+      return;
+    }
+
     if (currentPlan === 'free') {
       showToast('ℹ️', 'You are already on the Free plan.');
       return;
     }
+
+    const confirmed = window.confirm(
+      'Are you sure you want to cancel your subscription? You will be reverted to the Free plan immediately.'
+    );
+    if (!confirmed) return;
+
+    setIsSubmitting(true);
     try {
-      const res = await fetch(`${API_BASE}/subscriptions/cancel`, {
+      const res = await apiRequest('/subscriptions/cancel', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-role': user.role,
-        },
         body: JSON.stringify({ userId: Number(user.id) }),
       });
-      if (res.ok) {
-        setCurrentPlan('free');
-        showToast('✅', 'Subscription cancelled — Reverted to the Free plan');
-      } else {
-        showToast('⚠️', 'Could not cancel subscription.');
-      }
-    } catch {
-      showToast('⚠️', 'Could not cancel subscription.');
+      setCurrentPlan('free');
+      showToast('✅', res?.message || 'Subscription cancelled — Reverted to the Free plan');
+      await fetchStatus();
+    } catch (err) {
+      showToast('❌', err.message || 'Failed to cancel subscription');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return {
     user,
     currentPlan,
+    isLoading,
+    isSubmitting,
+    isOwner,
     toast,
     handlePlanChange,
     handleCancelSubscription,
+    refetchStatus: fetchStatus,
   };
 }
+

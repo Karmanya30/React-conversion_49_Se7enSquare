@@ -9,11 +9,20 @@ import '../styles/pricing.css';
 
 /**
  * Pricing Page Component
- * Refactored modular page displaying subscription tiers, current plan status,
- * upgrade/downgrade switching, and subscription cancellation matching 0cc099a.
+ * Displays subscription tiers, current plan status from DB,
+ * upgrade/downgrade switching, and subscription cancellation.
  */
 export default function Pricing() {
-  const { currentPlan, toast, handlePlanChange, handleCancelSubscription } = usePricing();
+  const {
+    user,
+    currentPlan,
+    isLoading,
+    isSubmitting,
+    isOwner,
+    toast,
+    handlePlanChange,
+    handleCancelSubscription,
+  } = usePricing();
 
   return (
     <AppShell
@@ -22,12 +31,48 @@ export default function Pricing() {
       headerBadge="PLANS"
     >
       <div className="pricing-page active">
+        {isOwner && (
+          <div
+            className="notice-pill"
+            style={{
+              marginBottom: '20px',
+              padding: '12px 16px',
+              borderRadius: '10px',
+              background: 'rgba(91, 110, 245, 0.12)',
+              border: '1px solid rgba(91, 110, 245, 0.3)',
+              color: '#c7d2fe',
+              fontSize: '13px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+            }}
+          >
+            <span>👑</span>
+            <span>
+              <strong>Platform Owner View:</strong> You have system-wide administrative access.
+              Individual subscriber plans are managed by players and organizers.
+            </span>
+          </div>
+        )}
         <PricingHeader />
-        <PlanGrid currentPlan={currentPlan} onPlanChange={handlePlanChange} />
-        <CancelSubscriptionCard onCancel={handleCancelSubscription} />
+        <PlanGrid
+          currentPlan={currentPlan}
+          onPlanChange={handlePlanChange}
+          isLoading={isLoading}
+          isSubmitting={isSubmitting}
+          isOwner={isOwner}
+        />
+        <CancelSubscriptionCard
+          onCancel={handleCancelSubscription}
+          currentPlan={currentPlan}
+          isSubmitting={isSubmitting}
+          isOwner={isOwner}
+          user={user}
+        />
       </div>
 
       <Toast toast={toast} />
     </AppShell>
   );
 }
+

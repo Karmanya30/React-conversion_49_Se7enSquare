@@ -1399,6 +1399,12 @@ mark.search-highlight {
     border: 1px solid rgba(99, 102, 241, 0.2)
 }
 
+.m-role-tag.member-c {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-muted, #9ca3af);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
 .emoji-picker {
     position: absolute;
     bottom: 90px;
@@ -1671,6 +1677,18 @@ mark.search-highlight {
     background: rgba(91, 110, 245, 0.12);
     color: #818cf8;
     border: 1px solid rgba(91, 110, 245, 0.2)
+}
+
+.role-you-badge {
+    background: rgba(91, 110, 245, 0.2);
+    color: #a5b4fc;
+    border: 1px solid rgba(91, 110, 245, 0.35)
+}
+
+.role-member-badge {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-3);
+    border: 1px solid rgba(255, 255, 255, 0.1)
 }
 
 .msg-time {

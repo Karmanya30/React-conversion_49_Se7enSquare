@@ -118,7 +118,7 @@ export default function useCommunityPage(id, navigate) {
       } catch {
         if (!cancelled) {
           setCommunity(null);
-          setLoadError('Could not reach the backend (http://localhost:3000). Is the NestJS server running?');
+          setLoadError('Could not reach the backend. Is the NestJS server running?');
         }
       }
       if (!cancelled) setLoading(false);
@@ -199,7 +199,7 @@ export default function useCommunityPage(id, navigate) {
       if (next) {
         const res = await fetch(`${API_BASE}/memberships`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-role': user.role },
+          headers: { 'Content-Type': 'application/json', 'x-role': user.role, ...(user.id ? { 'x-user-id': String(user.id) } : {}) },
           body: JSON.stringify({ userId: Number(user.id), communityId: Number(community.id) }),
         });
         if (!res.ok) {
@@ -209,7 +209,7 @@ export default function useCommunityPage(id, navigate) {
         }
         showToast(`Welcome to ${community.name}! 🚀`);
       } else {
-        const memsRes = await fetch(`${API_BASE}/memberships?userId=${user.id}`, { headers: { 'x-role': user.role } });
+        const memsRes = await fetch(`${API_BASE}/memberships?userId=${user.id}`, { headers: { 'x-role': user.role, ...(user.id ? { 'x-user-id': String(user.id) } : {}) } });
         if (!memsRes.ok) throw new Error(await apiErrorMessage(memsRes));
         const mems = await memsRes.json();
         const target = Array.isArray(mems)
@@ -218,7 +218,7 @@ export default function useCommunityPage(id, navigate) {
         if (target) {
           const delRes = await fetch(`${API_BASE}/memberships/${target.id}`, {
             method: 'DELETE',
-            headers: { 'x-role': user.role },
+            headers: { 'x-role': user.role, ...(user.id ? { 'x-user-id': String(user.id) } : {}) },
           });
           if (!delRes.ok) throw new Error(await apiErrorMessage(delRes));
         }
@@ -237,7 +237,7 @@ export default function useCommunityPage(id, navigate) {
     try {
       const res = await fetch(`${API_BASE}/communities/${community.id}`, {
         method: 'DELETE',
-        headers: { 'x-role': user.role },
+        headers: { 'x-role': user.role, ...(user.id ? { 'x-user-id': String(user.id) } : {}) },
       });
       if (!res.ok) {
         showToast(`⚠️ Could not delete community: ${await apiErrorMessage(res)}`);

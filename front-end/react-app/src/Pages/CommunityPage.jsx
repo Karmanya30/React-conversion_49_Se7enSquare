@@ -112,6 +112,7 @@ export default function CommunityPage() {
           community={community}
           channelEntries={channelEntries}
           joined={joined}
+          isOwner={isOwner}
           onLockedClick={() => showToast('🔒 Join this community first to access channels!')}
         />
       )}

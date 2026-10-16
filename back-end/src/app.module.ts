@@ -35,6 +35,8 @@ import { OrganisersModule } from './modules/organisers/organisers.module';
 import { FeaturedEventsModule } from './modules/featured-events/featured-events.module';
 import { ModeratorCertificationModule } from './modules/moderator-certification/moderator-certification.module';
 import { RatingsModule } from './modules/ratings/ratings.module';
+import { SanctionsModule } from './modules/sanctions/sanctions.module';
+import { AdminModule } from './modules/admin/admin.module';
 import { PlatformConfigController } from './modules/platform-config/platform-config.controller';
 import { ReportsController } from './modules/reports/reports.controller';
 import { AppealsController } from './modules/appeals/appeals.controller';
@@ -72,6 +74,8 @@ import { AppealsController } from './modules/appeals/appeals.controller';
     FeaturedEventsModule,
     ModeratorCertificationModule,
     RatingsModule,
+    SanctionsModule,
+    AdminModule,
   ],
   providers: [
     FileLoggerService,

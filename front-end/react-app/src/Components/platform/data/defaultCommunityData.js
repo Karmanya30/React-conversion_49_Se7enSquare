@@ -21,5 +21,4 @@ export const SETTINGS_TABS = [
   { id: 'members', label: 'Members' },
   { id: 'channels', label: 'Channels' },
   { id: 'rules', label: '📜 Rules' },
-  { id: 'insights', label: '💎 Insights' },
 ];

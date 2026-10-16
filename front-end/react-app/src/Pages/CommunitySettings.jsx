@@ -7,7 +7,6 @@ import BasicInfoTab from './CommunitySettings/components/BasicInfoTab';
 import MembersTab from './CommunitySettings/components/MembersTab';
 import ChannelsTab from './CommunitySettings/components/ChannelsTab';
 import RulesTab from './CommunitySettings/components/RulesTab';
-import InsightsTab from './CommunitySettings/components/InsightsTab';
 import SaveBar from './CommunitySettings/components/SaveBar';
 import CreateChannelModal from './CommunitySettings/components/CreateChannelModal';
 import '../styles/global.css';
@@ -16,7 +15,8 @@ import '../styles/community-settings.css';
 /**
  * Community Settings Page Component
  * Modular page managing community configuration, membership roles, channels,
- * rules, and insights, maintaining a clean .cs-page root container.
+ * and rules, maintaining a clean .cs-page root container.
+ * Note: Insights tab removed per product requirements.
  */
 export default function CommunitySettings() {
   const {
@@ -104,8 +104,6 @@ export default function CommunitySettings() {
                 onRulesChange={(val) => handleFieldChange('rules', val)}
               />
             )}
-
-            {activeTab === 'insights' && <InsightsTab community={community} />}
 
             {/* Save & Discard Actions */}
             <SaveBar

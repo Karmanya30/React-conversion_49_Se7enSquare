@@ -59,7 +59,7 @@ export default function useAuthForm() {
           (accountStatus === 'ACCOUNT_BANNED'
             ? 'This account has been banned.'
             : 'This account has been suspended.');
-        setLoginErrors((prev) => ({ ...prev, general: msg }));
+        setLoginErrors((prev) => ({ ...prev, general: msg, isSanctioned: true }));
         showToast('⚠️', msg);
       }
     }
@@ -118,8 +118,16 @@ export default function useAuthForm() {
     } catch (err) {
       console.error('Login request failed:', err);
       triggerShake();
-      const failMsg = err.message || 'Cannot reach authentication server';
-      setLoginErrors((prev) => ({ ...prev, general: failMsg }));
+      const failMsg = err.reason || err.message || 'Cannot reach authentication server';
+      const isSanctioned =
+        err.code === 'ACCOUNT_BANNED' ||
+        err.code === 'ACCOUNT_SUSPENDED' ||
+        err.status === 403;
+      setLoginErrors((prev) => ({
+        ...prev,
+        general: failMsg,
+        isSanctioned: isSanctioned || prev.isSanctioned,
+      }));
       showToast('❌', failMsg);
       setLoginLoading(false);
     }

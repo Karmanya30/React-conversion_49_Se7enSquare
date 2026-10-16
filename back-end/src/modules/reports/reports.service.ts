@@ -37,7 +37,7 @@ export class ReportsService {
     return created;
   }
 
-  updateStatus(id: number, status: ReportStatus): ReportRecord {
+  updateStatus(id: number, status: ReportStatus, resolutionNote?: string): ReportRecord {
     const report = this.findOne(id);
 
     const allowedTransitions: Record<ReportStatus, ReportStatus | null> = {
@@ -61,15 +61,27 @@ export class ReportsService {
     if (status === ReportStatus.ESCALATED) {
       report.escalatedTo = 'admin';
     }
+    if (resolutionNote) {
+      report.resolutionNote = resolutionNote;
+    }
     saveDb();
 
     if (status === ReportStatus.RESOLVED || status === ReportStatus.ESCALATED) {
       NotificationsService.push({
         userId: report.reporterId,
         type: 'report_status',
-        text: `Your report on ${report.targetType} #${report.targetId} was ${status}`,
+        text: `Your report on ${report.targetType} #${report.targetId} was ${status}${resolutionNote ? `: ${resolutionNote}` : ''}`,
         targetId: report.id,
       });
+
+      if (report.targetType === ReportTargetType.USER && report.targetId) {
+        NotificationsService.push({
+          userId: report.targetId,
+          type: 'report_status',
+          text: `A report concerning your account was ${status}${resolutionNote ? `: ${resolutionNote}` : ''}`,
+          targetId: report.id,
+        });
+      }
     }
 
     return report;

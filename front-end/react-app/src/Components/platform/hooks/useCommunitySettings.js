@@ -5,18 +5,13 @@ import useDirtyForm from './useDirtyForm';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
-function getRole() {
+function getStoredUser() {
   try {
-    const stored =
-      localStorage.getItem('user') ||
-      localStorage.getItem('nexus_user') ||
-      localStorage.getItem('currentUser');
-    const raw = stored ? JSON.parse(stored) : {};
-    return raw.role || 'user';
-  } catch {
-    return 'user';
-  }
+    const raw = localStorage.getItem('nexus_user') || localStorage.getItem('currentUser');
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
 }
+
 
 /**
  * Custom hook encapsulating CommunitySettings state, network fetch/save, and modal actions.
@@ -48,10 +43,15 @@ export default function useCommunitySettings() {
   useEffect(() => {
     async function loadCommunity() {
       try {
+        const su = getStoredUser();
+        const authHeaders = {
+          'x-role': su?.role || 'user',
+          ...(su?.id ? { 'x-user-id': String(su.id) } : {}),
+        };
         const [commRes, memsRes, usersRes] = await Promise.all([
-          fetch(`${API_BASE}/communities/${communityId}`, { headers: { 'x-role': getRole() } }),
-          fetch(`${API_BASE}/memberships?communityId=${communityId}`, { headers: { 'x-role': getRole() } }),
-          fetch(`${API_BASE}/users?communityId=${communityId}`, { headers: { 'x-role': getRole() } }),
+          fetch(`${API_BASE}/communities/${communityId}`, { headers: authHeaders }),
+          fetch(`${API_BASE}/memberships?communityId=${communityId}`, { headers: authHeaders }),
+          fetch(`${API_BASE}/users?communityId=${communityId}`, { headers: authHeaders }),
         ]);
         if (commRes.ok) {
           const data = await commRes.json();
@@ -111,13 +111,32 @@ export default function useCommunitySettings() {
     showToast(`Role updated to ${newRole}`);
   };
 
-  const handleRemoveMember = (memberId) => {
+  const handleRemoveMember = async (memberId) => {
+    // Immediately delete the membership on the backend
+    const su = getStoredUser();
+    const authHeaders = {
+      'x-role': su?.role || 'user',
+      ...(su?.id ? { 'x-user-id': String(su.id) } : {}),
+    };
+    try {
+      const res = await fetch(`${API_BASE}/memberships/${memberId}`, {
+        method: 'DELETE',
+        headers: authHeaders,
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        showToast(`⚠️ ${body?.message || 'Could not remove member'}`);
+        return;
+      }
+    } catch {
+      showToast('⚠️ Could not reach the backend');
+      return;
+    }
     setCommunity((prev) => ({
       ...prev,
       members: prev.members.filter((m) => m.id !== memberId),
     }));
-    markDirty();
-    showToast('Member removed');
+    showToast('✅ Member removed');
   };
 
   const handleDeleteChannel = (channelId) => {
@@ -159,6 +178,12 @@ export default function useCommunitySettings() {
   };
 
   const saveSettings = async () => {
+    const su = getStoredUser();
+    const authHeaders = {
+      'Content-Type': 'application/json',
+      'x-role': su?.role || 'user',
+      ...(su?.id ? { 'x-user-id': String(su.id) } : {}),
+    };
     try {
       const parsedRules = Array.isArray(community.rules)
         ? community.rules
@@ -166,25 +191,40 @@ export default function useCommunitySettings() {
         ? community.rules.split('\n').map((r) => r.trim()).filter(Boolean)
         : undefined;
 
-      await fetch(`${API_BASE}/communities/${communityId}`, {
+      // Normalise channels to plain objects the backend can store
+      const parsedChannels = Array.isArray(community.channels)
+        ? community.channels.map((ch) =>
+            typeof ch === 'string'
+              ? { name: ch, type: 'Text' }
+              : { name: ch.name, type: ch.type || 'Text' }
+          )
+        : undefined;
+
+      const res = await fetch(`${API_BASE}/communities/${communityId}`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-role': getRole(),
-        },
+        headers: authHeaders,
         body: JSON.stringify({
           name: community.name,
           description: community.description,
           banner: community.banner || undefined,
           rules: parsedRules,
+          channels: parsedChannels,
         }),
       });
+
+      if (!res.ok) {
+        let msg = `Save failed (${res.status})`;
+        try { const body = await res.json(); msg = body?.message || msg; } catch { /* ignore */ }
+        showToast(`⚠️ ${msg}`);
+        return;
+      }
+
       showToast('✅ Community settings saved successfully!');
-    } catch {
-      showToast('✅ Community settings saved (locally)!');
+      setInitialCommunity({ ...community });
+      markClean();
+    } catch (err) {
+      showToast(`⚠️ ${err.message || 'Could not save settings'}`);
     }
-    setInitialCommunity({ ...community });
-    markClean();
   };
 
   const discardSettings = () => {

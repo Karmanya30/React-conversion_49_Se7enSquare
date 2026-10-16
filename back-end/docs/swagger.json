@@ -1,7 +1,7 @@
 {
   "openapi": "3.0.0",
   "paths": {
-    "/users/me": {
+    "/api/users/me": {
       "get": {
         "operationId": "UsersController_getMe",
         "summary": "Get current user profile",
@@ -107,7 +107,7 @@
         ]
       }
     },
-    "/users/{id}/role": {
+    "/api/users/{id}/role": {
       "patch": {
         "operationId": "UsersController_updateRole",
         "summary": "Update user role",
@@ -175,7 +175,7 @@
         ]
       }
     },
-    "/users": {
+    "/api/users": {
       "get": {
         "operationId": "UsersController_findAll",
         "summary": "List all users",
@@ -211,6 +211,22 @@
             "required": false,
             "in": "query",
             "description": "Filter users by username, email or name",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "communityId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "reportId",
+            "required": true,
+            "in": "query",
             "schema": {
               "type": "string"
             }
@@ -297,7 +313,7 @@
         ]
       }
     },
-    "/users/{id}": {
+    "/api/users/{id}": {
       "get": {
         "operationId": "UsersController_findOne",
         "summary": "Get a single user by ID",
@@ -335,6 +351,14 @@
             "description": "Numeric user ID",
             "schema": {
               "type": "number"
+            }
+          },
+          {
+            "name": "reportId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -416,7 +440,7 @@
         ]
       }
     },
-    "/communities": {
+    "/api/communities": {
       "get": {
         "operationId": "CommunitiesController_findAll",
         "summary": "List all communities",
@@ -514,7 +538,7 @@
         ]
       }
     },
-    "/communities/{id}": {
+    "/api/communities/{id}": {
       "get": {
         "operationId": "CommunitiesController_findOne",
         "summary": "Get a single community by ID",
@@ -688,7 +712,7 @@
         ]
       }
     },
-    "/subscriptions": {
+    "/api/subscriptions": {
       "get": {
         "operationId": "SubscriptionsController_findAll",
         "summary": "Breakdown of active subscriptions by plan, plus the list of current premium subscribers",
@@ -714,7 +738,7 @@
         ]
       }
     },
-    "/subscriptions/status": {
+    "/api/subscriptions/status": {
       "get": {
         "operationId": "SubscriptionsController_status",
         "summary": "Get a user's current subscription plan",
@@ -756,7 +780,7 @@
         ]
       }
     },
-    "/subscriptions/upgrade": {
+    "/api/subscriptions/upgrade": {
       "post": {
         "operationId": "SubscriptionsController_upgrade",
         "summary": "Upgrade (or change) a subscription plan",
@@ -792,7 +816,7 @@
         ]
       }
     },
-    "/subscriptions/cancel": {
+    "/api/subscriptions/cancel": {
       "post": {
         "operationId": "SubscriptionsController_cancel",
         "summary": "Cancel a subscription",
@@ -837,7 +861,7 @@
         ]
       }
     },
-    "/payments/history": {
+    "/api/payments/history": {
       "get": {
         "operationId": "PaymentsController_history",
         "summary": "Get a user's payment history",
@@ -872,7 +896,7 @@
         ]
       }
     },
-    "/payments/summary": {
+    "/api/payments/summary": {
       "get": {
         "operationId": "PaymentsController_summary",
         "summary": "Get aggregate revenue summary",
@@ -898,7 +922,7 @@
         ]
       }
     },
-    "/events": {
+    "/api/events": {
       "get": {
         "operationId": "EventsController_findAll",
         "summary": "List all events",
@@ -1011,7 +1035,7 @@
         ]
       }
     },
-    "/events/{id}": {
+    "/api/events/{id}": {
       "get": {
         "operationId": "EventsController_findOne",
         "summary": "Get a single event by ID",
@@ -1185,7 +1209,7 @@
         ]
       }
     },
-    "/events/{id}/registrants": {
+    "/api/events/{id}/registrants": {
       "get": {
         "operationId": "EventsController_getRegistrants",
         "summary": "List an event's registrants",
@@ -1233,7 +1257,7 @@
         ]
       }
     },
-    "/reports": {
+    "/api/reports": {
       "get": {
         "operationId": "ReportsController_findAll",
         "summary": "List all reports",
@@ -1331,7 +1355,7 @@
         ]
       }
     },
-    "/reports/{id}/status": {
+    "/api/reports/{id}/status": {
       "patch": {
         "operationId": "ReportsController_updateStatus",
         "summary": "Update report status",
@@ -1397,7 +1421,7 @@
         ]
       }
     },
-    "/reports/{id}": {
+    "/api/reports/{id}": {
       "delete": {
         "operationId": "ReportsController_remove",
         "summary": "Delete a report",
@@ -1454,42 +1478,7 @@
         ]
       }
     },
-    "/sanctions/mine": {
-      "get": {
-        "operationId": "SanctionsController_findMine",
-        "summary": "Get current user active and historical sanctions",
-        "description": "Allows any user (including suspended or banned users) to view sanctions applied to their account.",
-        "parameters": [
-          {
-            "name": "x-user-id",
-            "in": "header",
-            "description": "Numeric user ID of the requesting user.",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-role",
-            "in": "header",
-            "description": "RBAC role header.",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of sanctions targeting the current user"
-          }
-        },
-        "tags": [
-          "sanctions"
-        ]
-      }
-    },
-    "/posts": {
+    "/api/posts": {
       "get": {
         "operationId": "PostsController_findAll",
         "summary": "Get all posts",
@@ -1572,7 +1561,7 @@
         ]
       }
     },
-    "/posts/{id}": {
+    "/api/posts/{id}": {
       "get": {
         "operationId": "PostsController_findOne",
         "summary": "Get post by id",
@@ -1700,7 +1689,7 @@
         ]
       }
     },
-    "/dashboard/stats": {
+    "/api/dashboard/stats": {
       "get": {
         "operationId": "DashboardController_getStats",
         "summary": "Get dashboard stats",
@@ -1732,7 +1721,7 @@
         ]
       }
     },
-    "/dashboard/revenue": {
+    "/api/dashboard/revenue": {
       "get": {
         "operationId": "DashboardController_getRevenue",
         "summary": "Get revenue overview",
@@ -1758,7 +1747,7 @@
         ]
       }
     },
-    "/memberships": {
+    "/api/memberships": {
       "get": {
         "operationId": "MembershipsController_findAll",
         "summary": "List all memberships, optionally filtered by communityId or userId",
@@ -1858,7 +1847,7 @@
         ]
       }
     },
-    "/memberships/{id}": {
+    "/api/memberships/{id}": {
       "delete": {
         "operationId": "MembershipsController_remove",
         "summary": "Leave a community (delete membership by id)",
@@ -1900,7 +1889,31 @@
         ]
       }
     },
-    "/auth/register": {
+    "/api/auth/change-password": {
+      "post": {
+        "operationId": "AuthController_changePassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/register": {
       "post": {
         "operationId": "AuthController_register",
         "summary": "Register a new user account",
@@ -1925,7 +1938,7 @@
         ]
       }
     },
-    "/auth/login": {
+    "/api/auth/login": {
       "post": {
         "operationId": "AuthController_login",
         "summary": "Sign in with username/email and password",
@@ -1950,7 +1963,7 @@
         ]
       }
     },
-    "/auth/google": {
+    "/api/auth/google": {
       "post": {
         "operationId": "AuthController_googleAuth",
         "summary": "Sign in or register with verified Google credential",
@@ -1975,7 +1988,7 @@
         ]
       }
     },
-    "/event-registrations": {
+    "/api/event-registrations": {
       "get": {
         "operationId": "EventRegistrationsController_findAll",
         "parameters": [
@@ -2018,7 +2031,7 @@
         ]
       }
     },
-    "/event-registrations/{id}": {
+    "/api/event-registrations/{id}": {
       "delete": {
         "operationId": "EventRegistrationsController_remove",
         "parameters": [
@@ -2041,7 +2054,7 @@
         ]
       }
     },
-    "/appeals": {
+    "/api/appeals": {
       "get": {
         "operationId": "AppealsController_findAll",
         "parameters": [
@@ -2086,7 +2099,7 @@
         ]
       }
     },
-    "/appeals/{id}/evidence": {
+    "/api/appeals/{id}/evidence": {
       "post": {
         "operationId": "AppealsController_addEvidence",
         "parameters": [
@@ -2119,7 +2132,7 @@
         ]
       }
     },
-    "/appeals/{id}/status": {
+    "/api/appeals/{id}/status": {
       "patch": {
         "operationId": "AppealsController_updateStatus",
         "parameters": [
@@ -2152,7 +2165,7 @@
         ]
       }
     },
-    "/messages": {
+    "/api/messages": {
       "get": {
         "operationId": "MessagesController_findAll",
         "parameters": [
@@ -2205,7 +2218,7 @@
         ]
       }
     },
-    "/channels/{id}/messages": {
+    "/api/channels/{id}/messages": {
       "get": {
         "operationId": "MessagesController_findByChannel",
         "parameters": [
@@ -2228,7 +2241,7 @@
         ]
       }
     },
-    "/messages/{id}/reactions": {
+    "/api/messages/{id}/reactions": {
       "post": {
         "operationId": "MessagesController_react",
         "parameters": [
@@ -2261,7 +2274,7 @@
         ]
       }
     },
-    "/messages/{id}/pin": {
+    "/api/messages/{id}/pin": {
       "patch": {
         "operationId": "MessagesController_pin",
         "parameters": [
@@ -2284,7 +2297,7 @@
         ]
       }
     },
-    "/messages/{id}/attachments": {
+    "/api/messages/{id}/attachments": {
       "post": {
         "operationId": "MessagesController_addAttachment",
         "parameters": [
@@ -2317,7 +2330,7 @@
         ]
       }
     },
-    "/audit-log": {
+    "/api/audit-log": {
       "get": {
         "operationId": "AuditController_findAll",
         "parameters": [],
@@ -2353,7 +2366,7 @@
         ]
       }
     },
-    "/platform-config": {
+    "/api/platform-config": {
       "get": {
         "operationId": "PlatformConfigController_findOne",
         "parameters": [],
@@ -2389,7 +2402,7 @@
         ]
       }
     },
-    "/uploads": {
+    "/api/uploads": {
       "post": {
         "operationId": "UploadController_uploadFile",
         "parameters": [],
@@ -2419,7 +2432,7 @@
         ]
       }
     },
-    "/notifications": {
+    "/api/notifications": {
       "get": {
         "operationId": "NotificationsController_findAll",
         "summary": "List notifications for a user, newest first",
@@ -2443,7 +2456,7 @@
         ]
       }
     },
-    "/notifications/read-all": {
+    "/api/notifications/read-all": {
       "patch": {
         "operationId": "NotificationsController_markAllRead",
         "summary": "Mark every notification for a user as read",
@@ -2468,7 +2481,7 @@
         ]
       }
     },
-    "/notifications/{id}": {
+    "/api/notifications/{id}": {
       "patch": {
         "operationId": "NotificationsController_update",
         "summary": "Mark a single notification read/unread",
@@ -2502,7 +2515,7 @@
         ]
       }
     },
-    "/organisers": {
+    "/api/organisers": {
       "get": {
         "operationId": "OrganisersController_findAll",
         "summary": "List all organiser applications",
@@ -2541,7 +2554,7 @@
         ]
       }
     },
-    "/organisers/apply": {
+    "/api/organisers/apply": {
       "post": {
         "operationId": "OrganisersController_apply",
         "summary": "Apply to become a Verified Organizer",
@@ -2577,7 +2590,7 @@
         ]
       }
     },
-    "/organisers/{id}": {
+    "/api/organisers/{id}": {
       "patch": {
         "operationId": "OrganisersController_setStatus",
         "summary": "Verify or reject an organiser application",
@@ -2621,7 +2634,7 @@
         ]
       }
     },
-    "/organisers/profile": {
+    "/api/organisers/profile": {
       "get": {
         "operationId": "OrganisersController_profile",
         "summary": "Get a user's organiser application/plan status",
@@ -2640,8 +2653,7 @@
             "required": true,
             "in": "query",
             "schema": {
-              "example": 6,
-              "type": "string"
+              "example": 6
             }
           }
         ],
@@ -2655,7 +2667,7 @@
         ]
       }
     },
-    "/organisers/analytics": {
+    "/api/organisers/analytics": {
       "get": {
         "operationId": "OrganisersController_analytics",
         "summary": "Get an organiser's tournament analytics",
@@ -2690,7 +2702,7 @@
         ]
       }
     },
-    "/organisers/subscription/upgrade": {
+    "/api/organisers/subscription/upgrade": {
       "post": {
         "operationId": "OrganisersController_upgradePlan",
         "summary": "Upgrade the organiser subscription tier",
@@ -2726,7 +2738,7 @@
         ]
       }
     },
-    "/featured-events": {
+    "/api/featured-events": {
       "get": {
         "operationId": "FeaturedEventsController_findAll",
         "summary": "List currently-active featured (promoted) events",
@@ -2786,7 +2798,7 @@
         ]
       }
     },
-    "/featured-events/{id}": {
+    "/api/featured-events/{id}": {
       "delete": {
         "operationId": "FeaturedEventsController_remove",
         "summary": "Remove a featured-event promotion",
@@ -2819,7 +2831,7 @@
         ]
       }
     },
-    "/moderator-certification": {
+    "/api/moderator-certification": {
       "get": {
         "operationId": "ModeratorCertificationController_findAll",
         "summary": "List all moderator applications",
@@ -2858,7 +2870,7 @@
         ]
       }
     },
-    "/moderator-certification/quiz": {
+    "/api/moderator-certification/quiz": {
       "get": {
         "operationId": "ModeratorCertificationController_quiz",
         "summary": "Get the moderation quiz questions",
@@ -2884,7 +2896,7 @@
         ]
       }
     },
-    "/moderator-certification/apply": {
+    "/api/moderator-certification/apply": {
       "post": {
         "operationId": "ModeratorCertificationController_apply",
         "summary": "Submit the moderation quiz to apply for Certified Moderator status",
@@ -2920,7 +2932,7 @@
         ]
       }
     },
-    "/moderator-certification/{id}": {
+    "/api/moderator-certification/{id}": {
       "patch": {
         "operationId": "ModeratorCertificationController_setStatus",
         "summary": "Certify or reject a moderator application",
@@ -2964,7 +2976,7 @@
         ]
       }
     },
-    "/moderator-certification/status": {
+    "/api/moderator-certification/status": {
       "get": {
         "operationId": "ModeratorCertificationController_status",
         "summary": "Get a user's moderator application status",
@@ -2983,8 +2995,7 @@
             "required": true,
             "in": "query",
             "schema": {
-              "example": 4,
-              "type": "string"
+              "example": 4
             }
           }
         ],
@@ -2998,7 +3009,7 @@
         ]
       }
     },
-    "/ratings": {
+    "/api/ratings": {
       "post": {
         "operationId": "RatingsController_create",
         "summary": "Rate an organiser or moderator",
@@ -3077,6 +3088,440 @@
           "ratings"
         ]
       }
+    },
+    "/api/users/{id}/sanctions": {
+      "get": {
+        "operationId": "SanctionsController_listForUser",
+        "summary": "List all sanctions for a user (admin/moderator only)",
+        "parameters": [
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "description": "Requesting user ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-role",
+            "in": "header",
+            "description": "RBAC role header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of SanctionRecord"
+          }
+        },
+        "tags": [
+          "sanctions"
+        ]
+      }
+    },
+    "/api/users/{id}/suspend": {
+      "post": {
+        "operationId": "SanctionsController_suspend",
+        "summary": "Suspend a user (admin only)",
+        "parameters": [
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "description": "Requesting user ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-role",
+            "in": "header",
+            "description": "RBAC role header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "example": {
+                  "reason": "Violation of community guidelines",
+                  "endsAt": "2026-11-01T00:00:00Z"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Sanction created, user status set to suspended"
+          }
+        },
+        "tags": [
+          "sanctions"
+        ]
+      }
+    },
+    "/api/users/{id}/ban": {
+      "post": {
+        "operationId": "SanctionsController_ban",
+        "summary": "Ban a user permanently (admin only)",
+        "parameters": [
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "description": "Requesting user ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-role",
+            "in": "header",
+            "description": "RBAC role header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "example": {
+                  "reason": "Repeated policy violations"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Sanction created, user status set to banned"
+          }
+        },
+        "tags": [
+          "sanctions"
+        ]
+      }
+    },
+    "/api/users/{id}/reinstate": {
+      "post": {
+        "operationId": "SanctionsController_reinstate",
+        "summary": "Reinstate a suspended or banned user (admin only)",
+        "parameters": [
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "description": "Requesting user ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-role",
+            "in": "header",
+            "description": "RBAC role header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "example": {
+                  "reason": "Appeal approved"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User status reset to active, active sanctions reversed"
+          }
+        },
+        "tags": [
+          "sanctions"
+        ]
+      }
+    },
+    "/api/sanctions/mine": {
+      "get": {
+        "operationId": "SanctionsMineController_findMine",
+        "summary": "Get current user sanctions (including suspended/banned users)",
+        "description": "Whitelisted by AuthContextGuard — accessible even when account is restricted.",
+        "parameters": [
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "description": "Requesting user ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-role",
+            "in": "header",
+            "description": "RBAC role header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of SanctionRecord for the current user"
+          }
+        },
+        "tags": [
+          "sanctions"
+        ]
+      }
+    },
+    "/api/sanctions": {
+      "post": {
+        "operationId": "SanctionsMineController_create",
+        "summary": "Create a sanction (admin or moderator)",
+        "parameters": [
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "description": "Requesting user ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-role",
+            "in": "header",
+            "description": "RBAC role header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSanctionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Sanction record created"
+          }
+        },
+        "tags": [
+          "sanctions"
+        ]
+      }
+    },
+    "/api/sanctions/{id}/reverse": {
+      "post": {
+        "operationId": "SanctionsMineController_reverse",
+        "summary": "Reverse an active sanction (admin only)",
+        "parameters": [
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "description": "Requesting user ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-role",
+            "in": "header",
+            "description": "RBAC role header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "sanctions"
+        ]
+      }
+    },
+    "/api/admin/communities/{id}/suspend": {
+      "post": {
+        "operationId": "AdminCommunitiesController_suspend",
+        "summary": "Suspend a community (admin only)",
+        "parameters": [
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "description": "Requesting user ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-role",
+            "in": "header",
+            "description": "RBAC role header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "example": {
+                  "reason": "Repeated policy violations"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Community suspended, sanction written, owner notified"
+          }
+        },
+        "tags": [
+          "admin-communities"
+        ]
+      }
+    },
+    "/api/admin/communities/{id}/reinstate": {
+      "post": {
+        "operationId": "AdminCommunitiesController_reinstate",
+        "summary": "Reinstate a suspended community (admin only)",
+        "parameters": [
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "description": "Requesting user ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-role",
+            "in": "header",
+            "description": "RBAC role header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "example": {
+                  "reason": "Appeal approved"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Community reinstated, active suspension sanctions reversed"
+          }
+        },
+        "tags": [
+          "admin-communities"
+        ]
+      }
     }
   },
   "info": {
@@ -3086,14 +3531,19 @@
     "contact": {}
   },
   "tags": [],
-  "servers": [],
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Local Dev Server"
+    }
+  ],
   "components": {
     "securitySchemes": {
       "x-role": {
         "type": "apiKey",
         "in": "header",
         "name": "x-role",
-        "description": "RBAC role header: admin | moderator | user"
+        "description": "RBAC role header: admin | community_manager | moderator | user"
       }
     },
     "schemas": {
@@ -3192,7 +3642,7 @@
             "example": "+91 98765 43210"
           },
           "avatar": {
-            "type": "string",
+            "type": "object",
             "example": "/uploads/1234-avatar.png"
           }
         }
@@ -3950,6 +4400,10 @@
               "resolved"
             ],
             "example": "reviewed"
+          },
+          "resolutionNote": {
+            "type": "string",
+            "example": "Resolved: Violation confirmed"
           }
         },
         "required": [
@@ -4109,6 +4563,10 @@
           "userId",
           "communityId"
         ]
+      },
+      "ChangePasswordDto": {
+        "type": "object",
+        "properties": {}
       },
       "RegisterDto": {
         "type": "object",
@@ -4437,35 +4895,11 @@
       },
       "ApplyOrganiserDto": {
         "type": "object",
-        "properties": {
-          "userId": {
-            "type": "number",
-            "example": 4
-          },
-          "experienceNote": {
-            "type": "string",
-            "example": "Ran 3 campus BGMI tournaments in the last year."
-          }
-        },
-        "required": [
-          "userId"
-        ]
+        "properties": {}
       },
       "UpdateOrganiserStatusDto": {
         "type": "object",
-        "properties": {
-          "status": {
-            "type": "string",
-            "example": "verified",
-            "enum": [
-              "verified",
-              "rejected"
-            ]
-          }
-        },
-        "required": [
-          "status"
-        ]
+        "properties": {}
       },
       "UpgradeOrganiserPlanDto": {
         "type": "object",
@@ -4512,46 +4946,11 @@
       },
       "SubmitQuizDto": {
         "type": "object",
-        "properties": {
-          "userId": {
-            "type": "number",
-            "example": 4
-          },
-          "answers": {
-            "example": [
-              1,
-              0,
-              2,
-              1,
-              0
-            ],
-            "description": "Zero-indexed selected option per question, in the order returned by GET /moderator-certification/quiz",
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        },
-        "required": [
-          "userId",
-          "answers"
-        ]
+        "properties": {}
       },
       "UpdateModeratorStatusDto": {
         "type": "object",
-        "properties": {
-          "status": {
-            "type": "string",
-            "example": "certified",
-            "enum": [
-              "certified",
-              "rejected"
-            ]
-          }
-        },
-        "required": [
-          "status"
-        ]
+        "properties": {}
       },
       "CreateRatingDto": {
         "type": "object",
@@ -4589,6 +4988,10 @@
           "raterId",
           "score"
         ]
+      },
+      "CreateSanctionDto": {
+        "type": "object",
+        "properties": {}
       }
     }
   }

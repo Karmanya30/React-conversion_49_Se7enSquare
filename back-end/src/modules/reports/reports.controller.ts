@@ -85,7 +85,7 @@ export class ReportsController {
     @Param('id', ParseIntPipe) id: number,
     @Body() payload: UpdateReportStatusDto,
   ) {
-    return this.reportsService.updateStatus(id, payload.status);
+    return this.reportsService.updateStatus(id, payload.status, payload.resolutionNote);
   }
 
   @Delete(':id')

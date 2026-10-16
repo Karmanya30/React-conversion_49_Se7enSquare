@@ -27,6 +27,7 @@ export default function useDashboard() {
   });
 
   const [communities, setCommunities] = useState([]);
+  const [createdCommunities, setCreatedCommunities] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [events, setEvents] = useState([]);
   const [stats, setStats] = useState(null);
@@ -57,17 +58,24 @@ export default function useDashboard() {
       }
 
       const currentId = currentUser?.id || 4;
-      const [commsRes, eventsRes, notifsRes, statsRes] = await Promise.allSettled([
-        dashboardService.getCommunities(),
+      const [joinedRes, createdRes, eventsRes, notifsRes, statsRes] = await Promise.allSettled([
+        dashboardService.getJoinedCommunities(currentId),
+        dashboardService.getCreatedCommunities(currentId),
         dashboardService.getEvents(),
         dashboardService.getNotifications(currentId),
         dashboardService.getStats(),
       ]);
 
-      if (commsRes.status === 'fulfilled' && Array.isArray(commsRes.value)) {
-        setCommunities(commsRes.value.slice(0, 8));
+      if (joinedRes.status === 'fulfilled' && Array.isArray(joinedRes.value)) {
+        setCommunities(joinedRes.value.slice(0, 8));
       } else {
         setCommunities([]);
+      }
+
+      if (createdRes.status === 'fulfilled' && Array.isArray(createdRes.value)) {
+        setCreatedCommunities(createdRes.value.slice(0, 8));
+      } else {
+        setCreatedCommunities([]);
       }
 
       if (eventsRes.status === 'fulfilled' && Array.isArray(eventsRes.value)) {
@@ -124,8 +132,9 @@ export default function useDashboard() {
       return;
     }
     const lower = val.toLowerCase();
+    const allComms = [...communities, ...createdCommunities];
     const results = [
-      ...communities
+      ...allComms
         .filter((c) => c.name?.toLowerCase().includes(lower))
         .map((c) => ({ type: 'community', id: c.id, label: c.name, icon: c.icon || '🏘️' })),
       ...events
@@ -147,6 +156,7 @@ export default function useDashboard() {
     user,
     greeting: getGreeting(),
     communities,
+    createdCommunities,
     notifications,
     events,
     stats,

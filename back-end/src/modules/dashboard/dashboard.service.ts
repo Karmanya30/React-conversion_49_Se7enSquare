@@ -8,8 +8,8 @@ export class DashboardService {
 
   getStats() {
     return {
-      totalUsers: db.users.length,
-      totalCommunities: db.communities.length,
+      totalUsers: db.users.filter((user) => user.status === 'active' || !user.status).length,
+      totalCommunities: db.communities.filter((c) => c.status !== 'suspended').length,
       totalEvents: db.events.length,
       pendingReportsCount: db.reports.filter((report) => report.status === 'pending').length,
       pendingAppealsCount: db.appeals.filter((appeal) => appeal.status === 'pending').length,

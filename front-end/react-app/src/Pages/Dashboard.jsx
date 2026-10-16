@@ -21,6 +21,7 @@ export default function Dashboard() {
     user,
     greeting,
     communities,
+    createdCommunities,
     notifications,
     events,
     stats,
@@ -61,6 +62,7 @@ export default function Dashboard() {
 
           <JoinedCommunities
             communities={communities}
+            createdCommunities={createdCommunities}
             loading={loading}
             navigate={navigate}
           />

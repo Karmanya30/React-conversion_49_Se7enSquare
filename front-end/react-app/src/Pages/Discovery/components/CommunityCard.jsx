@@ -4,51 +4,59 @@ import { memberCountOf, onlineCountOf } from '../../../Components/platform/data/
 
 /**
  * Individual community card: banner, icon, name, stats, tags, and Join/Leave button.
+ * CSS classes from discovery.css: c-card, c-banner, c-banner-inner, c-card-body,
+ * c-top, c-icon, c-badges, c-badge, c-name, c-cat, c-desc, c-footer, c-stats, c-stat, btn-join.
  */
 export default function CommunityCard({ comm, isJoined, onToggleJoin }) {
   const navigate = useNavigate();
+  const icon = comm.icon || '🏘️';
+  const memberCount = memberCountOf(comm);
+  const onlineCount = onlineCountOf(comm);
+
+  // grad from data (e.g. "grad-purple") maps banner background class to "banner-purple"
+  const grad = comm.grad || 'grad-purple';
+  const bannerClass = grad.replace('grad-', 'banner-');
 
   return (
     <div
-      className="comm-card"
-      style={{ cursor: 'pointer' }}
+      className="c-card"
       onClick={() => navigate(`/community/${comm.id}`)}
     >
-      <div className="cc-banner" style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.2), rgba(139,92,246,0.2))' }}>
-        <div className="cc-icon">{comm.icon || '🏘️'}</div>
+      <div className={`c-banner ${bannerClass}`}>
+        <div className="c-banner-inner">{icon}{icon}{icon}</div>
       </div>
-      <div className="cc-body">
-        <div className="cc-name">{comm.name}</div>
-        <div className="cc-meta">
-          <span className="cc-members">👥 {memberCountOf(comm).toLocaleString()} members</span>
-          {onlineCountOf(comm) > 0 && <span className="cc-online">🟢 {onlineCountOf(comm).toLocaleString()} online</span>}
+
+      <div className="c-card-body">
+        <div className="c-top">
+          <div className={`c-icon ${grad}`}>{icon}</div>
+          <div className="c-badges">
+            {memberCount > 15000 && <span className="c-badge badge-trending">🔥 Trending</span>}
+            {onlineCount > 1000  && <span className="c-badge badge-hot">⭐ Hot</span>}
+          </div>
         </div>
-        {comm.category && (
-          <div style={{ fontSize: '11.5px', color: 'var(--text-3,#888)', marginTop: '4px' }}>
-            📁 {comm.category}
+
+        <div>
+          <div className="c-name">{comm.name}</div>
+          <div className="c-cat">
+            {comm.category || 'Gaming'}
+            {comm.tags?.length ? ` · ${comm.tags.slice(0, 2).join(', ')}` : ''}
           </div>
-        )}
-        <div className="cc-desc">{comm.description}</div>
-        {comm.tags && (
-          <div className="cc-tags">
-            {comm.tags.slice(0, 3).map(t => (
-              <span key={t} className="cc-tag">{t}</span>
-            ))}
+        </div>
+
+        <div className="c-desc">{comm.description}</div>
+
+        <div className="c-footer">
+          <div className="c-stats">
+            <span className="c-stat">👥 {memberCount.toLocaleString()}</span>
+            <span className="c-stat">🟢 {onlineCount.toLocaleString()} online</span>
           </div>
-        )}
-        <button
-          className={`cc-join-btn${isJoined ? ' joined' : ''}`}
-          onClick={e => onToggleJoin(comm.id, e)}
-          style={{
-            marginTop: '12px', width: '100%', padding: '8px',
-            borderRadius: '8px', border: 'none', cursor: 'pointer',
-            background: isJoined ? 'rgba(99,102,241,0.15)' : '#6366f1',
-            color: isJoined ? '#818cf8' : '#fff',
-            fontWeight: 600, fontSize: '13px', transition: 'all 0.2s',
-          }}
-        >
-          {isJoined ? '✓ Joined' : 'Join'}
-        </button>
+          <button
+            className={`btn-join${isJoined ? ' joined' : ''}`}
+            onClick={e => { e.stopPropagation(); onToggleJoin(comm.id, e); }}
+          >
+            {isJoined ? '✓ Joined' : 'Join'}
+          </button>
+        </div>
       </div>
     </div>
   );

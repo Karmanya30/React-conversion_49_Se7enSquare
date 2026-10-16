@@ -10,7 +10,7 @@ export default function CategoryFilterBar({
   showSort, onToggleSort,
 }) {
   return (
-    <div className="filter-bar" id="filterBar">
+    <div className="filter-bar discovery-filter-bar" id="filterBar">
       {categories.map(cat => (
         <div
           key={cat}

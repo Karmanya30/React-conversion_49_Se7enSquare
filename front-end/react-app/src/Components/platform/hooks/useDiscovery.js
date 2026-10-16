@@ -1,13 +1,17 @@
 import { useState, useEffect, useMemo } from 'react';
 import { DEFAULT_COMMUNITIES, memberCountOf, onlineCountOf } from '../data/discoveryData';
 
-const API_BASE = 'http://localhost:3000/api';
+// Use Vite's built-in proxy (/api -> http://localhost:3000) to avoid CORS issues.
+const API_BASE = '/api';
 
 function getCurrentUser() {
   try {
     const stored = localStorage.getItem('nexus_user') || localStorage.getItem('currentUser');
-    return stored ? JSON.parse(stored) : {};
-  } catch { return {}; }
+    const user = stored ? JSON.parse(stored) : {};
+    // Always ensure role is set — backend rejects requests without a valid x-role header.
+    if (!user.role) user.role = 'user';
+    return user;
+  } catch { return { role: 'user' }; }
 }
 
 function getJoinedIdList() {
@@ -57,41 +61,50 @@ export default function useDiscovery() {
     let cancelled = false;
     async function fetchData() {
       const user = getCurrentUser();
-      const role = user.role || 'user';
+      const role = user.role; // always 'user' or better thanks to getCurrentUser()
       const headers = { 'x-role': role };
+
+      // --- 1. Fetch communities (primary — triggers warning on failure) ---
       try {
-        const [commsRes, memsRes, eventsRes] = await Promise.all([
-          fetch(`${API_BASE}/communities`, { headers }),
-          user.id ? fetch(`${API_BASE}/memberships?userId=${user.id}`, { headers }) : Promise.resolve(null),
-          fetch(`${API_BASE}/events`, { headers }),
-        ]);
+        const commsRes = await fetch(`${API_BASE}/communities`, { headers });
         if (cancelled) return;
         if (commsRes.ok) {
           const data = await commsRes.json();
           if (Array.isArray(data) && data.length > 0) setCommunities(data);
           setLoadWarning('');
         } else {
-          setLoadWarning(`Could not load communities — ${await apiErrorMessage(commsRes)}. Showing demo data.`);
-        }
-        if (memsRes && memsRes.ok) {
-          const mems = await memsRes.json();
-          if (Array.isArray(mems)) {
-            const ids = new Set(getJoinedIdList());
-            mems.forEach(m => ids.add(String(m.communityId)));
-            setJoinedIds(ids);
-          }
-        }
-        if (eventsRes.ok) {
-          const events = await eventsRes.json();
-          if (Array.isArray(events)) setEventCount(events.length);
+          setLoadWarning(`Could not load communities (${commsRes.status}). Showing demo data.`);
         }
       } catch {
-        if (!cancelled) {
-          setLoadWarning('Could not reach the backend (http://localhost:3000) — showing demo data.');
-        }
+        if (!cancelled)
+          setLoadWarning('Backend unreachable — showing demo data.');
       } finally {
         if (!cancelled) setLoading(false);
       }
+
+      // --- 2. Fetch memberships independently (non-critical) ---
+      if (user.id) {
+        try {
+          const memsRes = await fetch(`${API_BASE}/memberships?userId=${user.id}`, { headers });
+          if (!cancelled && memsRes.ok) {
+            const mems = await memsRes.json();
+            if (Array.isArray(mems)) {
+              const ids = new Set(getJoinedIdList());
+              mems.forEach(m => ids.add(String(m.communityId)));
+              if (!cancelled) setJoinedIds(ids);
+            }
+          }
+        } catch { /* ignore — user just won't see server-side joined state */ }
+      }
+
+      // --- 3. Fetch events independently (non-critical) ---
+      try {
+        const eventsRes = await fetch(`${API_BASE}/events`, { headers });
+        if (!cancelled && eventsRes.ok) {
+          const events = await eventsRes.json();
+          if (Array.isArray(events) && !cancelled) setEventCount(events.length);
+        }
+      } catch { /* ignore — event count stays null */ }
     }
     fetchData();
     return () => { cancelled = true; };

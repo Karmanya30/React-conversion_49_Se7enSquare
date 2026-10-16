@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../../../services/authService';
+import { initiateGoogleSignIn } from '../../../services/googleAuth';
 
 export const PERSONAS = [
   { name: 'ADMIN (admin01)', username: 'admin01', role: 'admin', icon: '🛡️', pass: 'Demo@123' },
@@ -62,6 +63,29 @@ export default function useAuthForm() {
     return Object.keys(errors).length === 0;
   };
 
+  const navigateByRole = (userRole) => {
+    switch (userRole) {
+      case 'admin':
+        navigate('/admin-dashboard');
+        break;
+      case 'owner':
+        navigate('/owner-dashboard');
+        break;
+      case 'organizer':
+        navigate('/organizer-dashboard');
+        break;
+      case 'moderator':
+        navigate('/mod-panel');
+        break;
+      case 'community_manager':
+        navigate('/event-approval');
+        break;
+      default:
+        navigate('/dashboard');
+        break;
+    }
+  };
+
   const handleLoginSubmit = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
     if (!validateLogin()) {
@@ -89,27 +113,7 @@ export default function useAuthForm() {
 
       setTimeout(() => {
         setLoginLoading(false);
-        // Role-based route redirection
-        switch (user.role) {
-          case 'admin':
-            navigate('/admin-dashboard');
-            break;
-          case 'owner':
-            navigate('/owner-dashboard');
-            break;
-          case 'organizer':
-            navigate('/organizer-dashboard');
-            break;
-          case 'moderator':
-            navigate('/mod-panel');
-            break;
-          case 'community_manager':
-            navigate('/event-approval');
-            break;
-          default:
-            navigate('/dashboard');
-            break;
-        }
+        navigateByRole(user.role);
       }, 700);
     } catch (err) {
       console.error('Login request failed:', err);
@@ -261,6 +265,58 @@ export default function useAuthForm() {
     }, 1200);
   };
 
+  // ── 6. Google Sign-In State & Handler ──
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  const handleGoogleSignIn = async () => {
+    setGoogleLoading(true);
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+    try {
+      const result = await initiateGoogleSignIn(clientId);
+
+      if (result.error) {
+        if (
+          result.error === 'ACCESS_DENIED' ||
+          result.error === 'POPUP_FAILED' ||
+          result.error === 'POPUP_CLOSED'
+        ) {
+          showToast('ℹ️', result.message || 'Google sign-in was cancelled.');
+        } else if (result.error === 'MISSING_CLIENT_ID') {
+          showToast('⚠️', result.message);
+        } else {
+          showToast('❌', result.message || 'Google sign-in failed.');
+        }
+        setGoogleLoading(false);
+        return;
+      }
+
+      if (result.accessToken || result.credential) {
+        showToast('🔄', 'Signing in with Google...');
+        const user = await authService.loginWithGoogle({
+          accessToken: result.accessToken,
+          credential: result.credential,
+        });
+
+        showToast(
+          '🎉',
+          `Welcome, ${user.firstName || user.username} (${(user.role || 'user').toUpperCase()})!`
+        );
+
+        setTimeout(() => {
+          navigateByRole(user.role);
+        }, 700);
+      }
+    } catch (err) {
+      console.error('Google login error:', err);
+      triggerShake();
+      const failMsg = err.message || 'Google authentication failed';
+      showToast('❌', failMsg);
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
   return {
     navigate,
     currentTab,
@@ -315,5 +371,8 @@ export default function useAuthForm() {
     forgotError,
     forgotLoading,
     handleForgotSubmit,
+    // Google Sign-In
+    googleLoading,
+    handleGoogleSignIn,
   };
 }

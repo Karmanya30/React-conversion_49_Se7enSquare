@@ -33,10 +33,23 @@ export async function apiRequest(endpoint, options = {}) {
     ...(options.headers || {}),
   };
 
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  });
+  let response;
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers,
+    });
+  } catch (netErr) {
+    if (netErr instanceof TypeError && (netErr.message.includes('fetch') || netErr.message.includes('Network'))) {
+      const connErr = new Error(
+        'Unable to connect to Se7enSquare server. Please ensure the backend is running on http://localhost:3000.'
+      );
+      connErr.status = 0;
+      connErr.isNetworkError = true;
+      throw connErr;
+    }
+    throw netErr;
+  }
 
   const contentType = response.headers.get('content-type');
   const data = (contentType && contentType.includes('application/json'))

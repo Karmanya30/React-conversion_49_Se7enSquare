@@ -3,11 +3,31 @@ import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as express from 'express';
 import helmet from 'helmet';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { AppModule } from './app.module';
 import { FileLoggerService } from './common/logger/file-logger.service';
 import { globalRateLimiter } from './common/middleware/security.middleware';
+
+function loadEnvironment() {
+  const envPath = join(process.cwd(), '.env');
+  if (existsSync(envPath)) {
+    const lines = readFileSync(envPath, 'utf8').split('\n');
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const idx = trimmed.indexOf('=');
+      if (idx !== -1) {
+        const key = trimmed.slice(0, idx).trim();
+        const val = trimmed.slice(idx + 1).trim().replace(/^["']|["']$/g, '');
+        if (key && !process.env[key]) {
+          process.env[key] = val;
+        }
+      }
+    }
+  }
+}
+loadEnvironment();
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -17,6 +37,7 @@ async function bootstrap() {
   app.use(
     helmet({
       crossOriginResourcePolicy: false, // allow static upload resources
+      crossOriginOpenerPolicy: false, // allow Google OAuth popup communication
     }),
   );
 
@@ -78,8 +99,9 @@ async function bootstrap() {
     logger.error(`Unhandled Rejection: ${reasonText}`, stack, 'Process');
   });
 
-  await app.listen(3000);
-  logger.log('Gameunity Backend successfully listening on http://localhost:3000', 'Bootstrap');
+  const port = process.env.PORT || 3000;
+  await app.listen(port);
+  logger.log(`Se7enSquare Backend successfully listening on http://localhost:${port}`, 'Bootstrap');
 }
 
 void bootstrap();

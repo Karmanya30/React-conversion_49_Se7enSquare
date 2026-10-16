@@ -15,7 +15,6 @@ export default function Login() {
     setCurrentTab,
     cardShake,
     toast,
-    showToast,
     // Login
     loginEmail,
     setLoginEmail,
@@ -64,6 +63,9 @@ export default function Login() {
     setForgotError,
     forgotLoading,
     handleForgotSubmit,
+    // Google Sign-In
+    googleLoading,
+    handleGoogleSignIn,
   } = useAuthForm();
 
   return (
@@ -296,9 +298,11 @@ export default function Login() {
               <button
                 type="button"
                 className="btn-google"
-                onClick={() => showToast('🌐', 'Google Authentication simulated for demo')}
+                onClick={handleGoogleSignIn}
+                disabled={googleLoading}
+                aria-label="Continue with Google"
               >
-                <svg width="18" height="18" viewBox="0 0 18 18">
+                <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
                   <path
                     d="M17.64 9.2c0-.637-.057-1.252-.164-1.842H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.614z"
                     fill="#4285F4"
@@ -316,7 +320,7 @@ export default function Login() {
                     fill="#EA4335"
                   />
                 </svg>
-                <span>Google</span>
+                <span>{googleLoading ? 'Signing in with Google...' : 'Continue with Google'}</span>
               </button>
             </form>
           )}
@@ -518,9 +522,11 @@ export default function Login() {
               <button
                 type="button"
                 className="btn-google"
-                onClick={() => showToast('🌐', 'Google registration simulated for demo')}
+                onClick={handleGoogleSignIn}
+                disabled={googleLoading}
+                aria-label="Continue with Google"
               >
-                <svg width="18" height="18" viewBox="0 0 18 18">
+                <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
                   <path
                     d="M17.64 9.2c0-.637-.057-1.252-.164-1.842H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.614z"
                     fill="#4285F4"
@@ -538,7 +544,7 @@ export default function Login() {
                     fill="#EA4335"
                   />
                 </svg>
-                <span>Continue with Google</span>
+                <span>{googleLoading ? 'Signing up with Google...' : 'Continue with Google'}</span>
               </button>
             </form>
           )}

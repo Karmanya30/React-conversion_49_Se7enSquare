@@ -39,6 +39,23 @@ export const authService = {
   },
 
   /**
+   * Authenticate with verified Google credential or access token.
+   */
+  async loginWithGoogle({ credential, accessToken }) {
+    const payload = {};
+    if (credential) payload.credential = credential;
+    if (accessToken) payload.accessToken = accessToken;
+
+    const user = await apiRequest('/auth/google', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+
+    this.saveSession(user);
+    return user;
+  },
+
+  /**
    * Persists authenticated user in localStorage.
    */
   saveSession(user) {

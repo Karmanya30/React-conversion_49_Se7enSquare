@@ -18,6 +18,8 @@ export interface UserRecord {
   lastName?: string;
   phone?: string;
   avatar?: string | null;
+  googleId?: string;
+  authProvider?: 'local' | 'google';
 }
 
 export interface CommunityRecord {

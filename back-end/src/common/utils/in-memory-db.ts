@@ -241,7 +241,7 @@ const counters = {
   rating: 1,
 };
 
-let seedDb = {
+const seedDb = {
   users: [
     { id: 1, username: 'admin01', email: 'admin@gameunity.local', role: AppRole.ADMIN, bio: 'Platform administrator' },
     { id: 2, username: 'mod01', email: 'mod@gameunity.local', role: AppRole.MODERATOR, bio: 'Community moderator' },

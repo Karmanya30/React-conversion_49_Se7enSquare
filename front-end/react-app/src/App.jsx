@@ -23,20 +23,11 @@ import OrganizerDashboard from './Pages/OrganizerDashboard';
 import OwnerDashboard from './Pages/OwnerDashboard';
 import ProfileSettings from './Pages/ProfileSettings';
 import User from './Pages/User';
+import { authService } from './services/authService';
 
 // Protected Route wrapper with role-based access control
-function getStoredUser() {
-  try {
-    const raw = localStorage.getItem('nexus_user') || localStorage.getItem('currentUser');
-    if (!raw) return null;
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
-}
-
 function ProtectedRoute({ children, allowedRoles }) {
-  const user = getStoredUser();
+  const user = authService.getCurrentUser();
 
   if (!user || !user.username) {
     return <Navigate to="/login" replace />;

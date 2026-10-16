@@ -25,8 +25,6 @@ const DEFAULT_EVENTS = [
   { id: 3, title: 'UI Design Sprint', community: 'Design Studio', communityId: 3, date: '2025-03-12', time: '15:00', type: 'Workshop', mode: 'In-Person', capacity: 30, registered: 18, description: 'Weekly UI critique and rapid design sprint session. Bring your current project!', status: 'approved', icon: '🎨', free: false },
 ];
 
-const CATEGORIES = ['Hackathon', 'Workshop', 'AMA', 'Tournament', 'Discussion', 'Social'];
-
 function formatDate(dateStr) {
   if (!dateStr) return 'TBD';
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -84,7 +82,6 @@ export default function Events() {
   }, [user.role, user.id]);
 
   const canCreate = ['user', 'community_manager', 'organizer', 'admin'].includes(user.role);
-  const isOrganizer = user.role === 'organizer';
 
   const upcomingEvents = events.filter(e => e.status === 'approved');
 

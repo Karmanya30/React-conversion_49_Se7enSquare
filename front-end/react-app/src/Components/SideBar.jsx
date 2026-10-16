@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { authService } from '../services/authService';
 import '../styles/sidebar.css';
 
 /**
@@ -243,9 +244,7 @@ export default function SideBar() {
           <button
             className="sb-profile__logout"
             onClick={() => {
-              localStorage.removeItem('nexus_user');
-              localStorage.removeItem('currentUser');
-              localStorage.removeItem('role');
+              authService.clearSession();
               window.location.href = '/login';
             }}
             aria-label="Log out"

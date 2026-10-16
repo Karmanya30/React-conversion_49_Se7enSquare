@@ -35,7 +35,6 @@ import { FeaturedEventsModule } from './modules/featured-events/featured-events.
 import { ModeratorCertificationModule } from './modules/moderator-certification/moderator-certification.module';
 import { RatingsModule } from './modules/ratings/ratings.module';
 import { PlatformConfigController } from './modules/platform-config/platform-config.controller';
-import { UploadController } from './modules/upload/upload.controller';
 import { ReportsController } from './modules/reports/reports.controller';
 import { AppealsController } from './modules/appeals/appeals.controller';
 // NOTE: back-end/src/users/ (UserModule) is intentionally NOT registered here.

@@ -1831,7 +1831,16 @@
     "/api/appeals": {
       "get": {
         "operationId": "AppealsController_findAll",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": ""

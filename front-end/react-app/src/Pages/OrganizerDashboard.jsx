@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SideBar from '../Components/SideBar';
 import '../styles/global.css';
@@ -58,11 +58,11 @@ export default function OrganizerDashboard() {
     setTimeout(() => setToastMsg(null), 3000);
   };
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
-    let eventsData = [];
-    let commsData = [];
-    let regsData = [];
+    let eventsData;
+    let commsData;
+    let regsData;
 
     try {
       const [evRes, commRes, regRes] = await Promise.all([
@@ -78,9 +78,11 @@ export default function OrganizerDashboard() {
       try {
         eventsData = JSON.parse(localStorage.getItem('events') || '[]');
         commsData = JSON.parse(localStorage.getItem('communities') || '[]');
+        regsData = [];
       } catch {
         eventsData = [];
         commsData = [];
+        regsData = [];
       }
     }
 
@@ -133,11 +135,11 @@ export default function OrganizerDashboard() {
     }
 
     setLoading(false);
-  };
+  }, [currentUser.id, currentUser.role, currentUser.username]);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
   const handleUpgradePlan = async () => {
     try {

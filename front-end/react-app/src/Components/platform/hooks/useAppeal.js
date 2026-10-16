@@ -1,46 +1,49 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { APPEAL_TYPES } from '../data/appealData';
-
-const API_BASE = 'http://localhost:3000/api';
-
-function getUser() {
-  try {
-    const raw = JSON.parse(localStorage.getItem('nexus_user') || localStorage.getItem('currentUser') || '{}');
-    return { role: raw.role || 'user', firstName: raw.firstName || 'User', username: raw.username || 'user', id: raw.id || 1 };
-  } catch { return { role: 'user', firstName: 'User', username: 'user', id: 1 }; }
-}
+import { appealService } from '../../../services/appealService';
+import { authService } from '../../../services/authService';
 
 /**
  * Manages all state, validation, and submission logic for the Appeal page.
  */
 export default function useAppeal() {
   const navigate = useNavigate();
-  const user = getUser();
+  const rawUser = authService.getCurrentUser();
+  const user = {
+    role: rawUser?.role || 'user',
+    firstName: rawUser?.firstName || 'User',
+    username: rawUser?.username || 'user',
+    id: rawUser?.id || 4,
+  };
 
-  const [appealType,  setAppealType]  = useState('');
-  const [statement,   setStatement]   = useState('');
-  const [commitment,  setCommitment]  = useState('');
-  const [errors,      setErrors]      = useState({});
-  const [submitted,   setSubmitted]   = useState(false);
-  const [submitting,  setSubmitting]  = useState(false);
-  const [refId,       setRefId]       = useState('');
-  const [myAppeals,   setMyAppeals]   = useState([]);
+  const [appealType, setAppealType] = useState('');
+  const [statement, setStatement] = useState('');
+  const [commitment, setCommitment] = useState('');
+  const [errors, setErrors] = useState({});
+  const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [refId, setRefId] = useState('');
+  const [myAppeals, setMyAppeals] = useState([]);
+  const [loadingAppeals, setLoadingAppeals] = useState(false);
+
+  const fetchAppeals = useCallback(async () => {
+    setLoadingAppeals(true);
+    try {
+      const data = await appealService.getAppeals(user.id);
+      if (Array.isArray(data)) {
+        setMyAppeals(data.filter((a) => !user.id || a.userId === user.id));
+      }
+    } catch (err) {
+      console.warn('Could not fetch appeals:', err);
+    } finally {
+      setLoadingAppeals(false);
+    }
+  }, [user.id]);
 
   useEffect(() => {
-    async function fetchAppeals() {
-      try {
-        const res = await fetch(`${API_BASE}/appeals`, { headers: { 'x-role': user.role } });
-        if (res.ok) {
-          const d = await res.json();
-          if (Array.isArray(d)) {
-            setMyAppeals(d.filter(a => !user.id || a.userId === user.id));
-          }
-        }
-      } catch {}
-    }
     fetchAppeals();
-  }, [user.id, user.role]);
+  }, [fetchAppeals]);
 
   const validate = () => {
     const errs = {};
@@ -53,30 +56,31 @@ export default function useAppeal() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     if (!validate()) return;
     setSubmitting(true);
 
     const payload = {
-      userId:          Number(user.id || 4),
-      actionId:        `ACT-${Date.now()}`,
-      text:            statement.trim(),
+      userId: Number(user.id || 4),
+      actionId: `ACT-${Date.now()}`,
+      text: statement.trim(),
       acknowledgement: (commitment || 'I agree to the platform community guidelines').slice(0, 95),
-      resolution:      (appealType || 'Reconsideration').slice(0, 95),
+      resolution: (appealType || 'Reconsideration').slice(0, 95),
+      evidence: [],
     };
 
     try {
-      const res  = await fetch(`${API_BASE}/appeals`, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json', 'x-role': user.role },
-        body:    JSON.stringify(payload),
-      });
-      const data = res.ok ? await res.json() : {};
+      const data = await appealService.createAppeal(payload);
       setRefId(`APL-${data.id || Date.now()}`);
-    } catch { setRefId(`APL-${Date.now()}`); }
-
-    setSubmitting(false);
-    setSubmitted(true);
+      // Refresh appeals list
+      fetchAppeals();
+    } catch (err) {
+      console.warn('Appeal creation fallback:', err);
+      setRefId(`APL-${Date.now()}`);
+    } finally {
+      setSubmitting(false);
+      setSubmitted(true);
+    }
   };
 
   const resetForm = () => {
@@ -84,20 +88,29 @@ export default function useAppeal() {
     setAppealType('');
     setStatement('');
     setCommitment('');
+    setErrors({});
   };
 
   return {
-    navigate, user,
+    navigate,
+    user,
     // Form state
-    appealType, setAppealType,
-    statement, setStatement,
-    commitment, setCommitment,
+    appealType,
+    setAppealType,
+    statement,
+    setStatement,
+    commitment,
+    setCommitment,
     errors,
     // Submission
-    submitted, submitting, refId,
-    handleSubmit, resetForm,
+    submitted,
+    submitting,
+    refId,
+    handleSubmit,
+    resetForm,
     // Previous appeals
     myAppeals,
+    loadingAppeals,
     APPEAL_TYPES,
   };
 }

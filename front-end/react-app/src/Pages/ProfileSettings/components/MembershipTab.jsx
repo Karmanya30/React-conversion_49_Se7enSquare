@@ -79,6 +79,7 @@ export default function MembershipTab({
                         type="radio"
                         name={q.key}
                         value={opt.value}
+                        checked={quizAnswers?.[q.key] === opt.value}
                         onChange={e => setQuizAnswers(prev => ({ ...prev, [q.key]: e.target.value }))}
                       />
                       {' '}{opt.label}

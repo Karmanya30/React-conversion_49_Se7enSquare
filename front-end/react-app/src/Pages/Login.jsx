@@ -1,313 +1,70 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React from 'react';
+import { Link } from 'react-router-dom';
 import Button from '../Components/Button';
+import useAuthForm from '../Components/platform/hooks/useAuthForm';
 import '../styles/login.css';
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 /**
  * Login & Authentication Component
- * Full-stack authentication connected to NestJS backend /api/auth endpoints.
- * Features real credentials validation, JWT/role-based session persistence,
- * and automatic role-aware routing.
+ * Converted from login.html, preserving all styles, animations, and personas.
+ * Architecture: Clean UI/presentation layer backed by useAuthForm() hook and authService.
  */
 export default function Login() {
-  const navigate = useNavigate();
-
-  // ── 1. Tab & View State ──
-  // Tabs: 'login' | 'register' | 'forgot' | 'forgot-success'
-  const [currentTab, setCurrentTab] = useState('login');
-  const [cardShake, setCardShake] = useState(false);
-
-  // ── 2. Toast State ──
-  const [toast, setToast] = useState({ show: false, icon: '✅', msg: '' });
-
-  const showToast = (icon, msg) => {
-    setToast({ show: true, icon, msg });
-    setTimeout(() => {
-      setToast({ show: false, icon: '✅', msg: '' });
-    }, 3500);
-  };
-
-  const triggerShake = () => {
-    setCardShake(true);
-    setTimeout(() => setCardShake(false), 450);
-  };
-
-  // ── 3. Login Form State & Validation ──
-  const [loginEmail, setLoginEmail] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
-  const [loginRole, setLoginRole] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
-  const [showLoginPassword, setShowLoginPassword] = useState(false);
-  const [loginLoading, setLoginLoading] = useState(false);
-  const [loginErrors, setLoginErrors] = useState({});
-
-  const validateLogin = () => {
-    const errors = {};
-    const trimmedInput = loginEmail.trim();
-
-    if (!trimmedInput) {
-      errors.email = 'Email or username is required.';
-    }
-
-    if (!loginPassword) {
-      errors.password = 'Password is required.';
-    }
-
-    setLoginErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  const handleLoginSubmit = async (e) => {
-    e.preventDefault();
-    if (!validateLogin()) {
-      triggerShake();
-      showToast('⚠️', 'Please enter your username/email and password.');
-      return;
-    }
-
-    setLoginLoading(true);
-    setLoginErrors(prev => ({ ...prev, general: '' }));
-
-    try {
-      const response = await fetch(`${API_BASE}/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          login: loginEmail.trim(),
-          password: loginPassword,
-          role: loginRole || undefined,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        const errorMsg = data.message || 'Invalid username, email, or password.';
-        triggerShake();
-        const displayMsg = Array.isArray(errorMsg) ? errorMsg.join(', ') : errorMsg;
-        setLoginErrors(prev => ({
-          ...prev,
-          general: displayMsg,
-        }));
-        showToast('❌', displayMsg);
-        setLoginLoading(false);
-        return;
-      }
-
-      // Successful login
-      const user = data;
-      localStorage.setItem('nexus_user', JSON.stringify(user));
-      localStorage.setItem('currentUser', JSON.stringify(user));
-      localStorage.setItem('role', user.role || loginRole || 'user');
-
-      showToast('✅', `Signed in successfully as ${user.username} (${(user.role || loginRole || 'user').toUpperCase()})!`);
-
-      setTimeout(() => {
-        setLoginLoading(false);
-        // Role-based route redirection
-        switch (user.role) {
-          case 'admin':
-            navigate('/admin-dashboard');
-            break;
-          case 'owner':
-            navigate('/owner-dashboard');
-            break;
-          case 'organizer':
-            navigate('/organizer-dashboard');
-            break;
-          case 'moderator':
-            navigate('/mod-panel');
-            break;
-          case 'community_manager':
-            navigate('/event-approval');
-            break;
-          default:
-            navigate('/dashboard');
-            break;
-        }
-      }, 700);
-    } catch (err) {
-      console.error('Login request failed:', err);
-      triggerShake();
-      const failMsg = 'Cannot reach authentication server at ' + API_BASE;
-      setLoginErrors(prev => ({ ...prev, general: failMsg }));
-      showToast('❌', failMsg);
-      setLoginLoading(false);
-    }
-  };
-
-  // ── 4. Real Backend Persona Access Handler ──
-  const personas = [
-    { name: 'ADMIN (admin01)', username: 'admin01', role: 'admin', icon: '🛡️', pass: 'Demo@123' },
-    { name: 'MOD (mod01)', username: 'mod01', role: 'moderator', icon: '🔍', pass: 'Demo@123' },
-    { name: 'CM (cm01)', username: 'cm01', role: 'community_manager', icon: '📅', pass: 'Demo@123' },
-    { name: 'ORGANIZER (org01)', username: 'org01', role: 'organizer', icon: '🏆', pass: 'Demo@123' },
-    { name: 'PLAYER (player01)', username: 'player01', role: 'user', icon: '🎮', pass: 'Demo@123' },
-    { name: 'OWNER (sanidhya)', username: 'sanidhya', role: 'owner', icon: '👑', pass: 'Demo@123' },
-  ];
-
-  const handleQuickLogin = (p) => {
-    setCurrentTab('login');
-    setLoginEmail(p.username);
-    setLoginPassword(p.pass);
-    setLoginRole(p.role);
-    setLoginErrors({});
-    showToast('⚡', `Loaded credentials for ${p.name}`);
-  };
-
-  // ── 5. Register Form State & Validation ──
-  const [regFullName, setRegFullName] = useState('');
-  const [regEmail, setRegEmail] = useState('');
-  const [regHandle, setRegHandle] = useState('');
-  const [regPassword, setRegPassword] = useState('');
-  const [regConfirm, setRegConfirm] = useState('');
-  const [regRole, setRegRole] = useState('user');
-  const [regTerms, setRegTerms] = useState(false);
-  const [showRegPassword, setShowRegPassword] = useState(false);
-  const [showRegConfirm, setShowRegConfirm] = useState(false);
-  const [regLoading, setRegLoading] = useState(false);
-  const [regErrors, setRegErrors] = useState({});
-
-  // Password strength calculation
-  const getPasswordStrength = (pass) => {
-    if (!pass) return { level: '', label: '' };
-    let score = 0;
-    if (pass.length >= 8) score++;
-    if (/[A-Z]/.test(pass)) score++;
-    if (/[0-9]/.test(pass)) score++;
-    if (/[!@#$%^&*]/.test(pass)) score++;
-
-    const levels = ['', 'weak', 'fair', 'good', 'strong'];
-    const labels = ['', 'Weak', 'Fair', 'Good', 'Strong'];
-    return { level: levels[score] || 'weak', label: labels[score] || 'Weak' };
-  };
-
-  const strength = getPasswordStrength(regPassword);
-
-  const validateRegister = () => {
-    const errors = {};
-    if (!regFullName.trim()) errors.fullName = 'Full Name is required.';
-    if (!regEmail.trim()) {
-      errors.email = 'Email address is required.';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(regEmail.trim())) {
-      errors.email = 'Please enter a valid email address.';
-    }
-
-    if (!regHandle.trim()) {
-      errors.handle = 'Username handle is required.';
-    } else if (!/^[a-zA-Z0-9_]{3,20}$/.test(regHandle.trim())) {
-      errors.handle = 'Handle must be 3-20 characters (letters, numbers, underscores).';
-    }
-
-    if (!regPassword) {
-      errors.password = 'Password is required.';
-    } else if (regPassword.length < 8) {
-      errors.password = 'Password must be at least 8 characters.';
-    }
-
-    if (regPassword !== regConfirm) {
-      errors.confirm = 'Passwords do not match.';
-    }
-
-    if (!regRole) {
-      errors.role = 'Please select an account type.';
-    }
-
-    if (!regTerms) {
-      errors.terms = 'You must accept the Terms of Service to proceed.';
-    }
-
-    setRegErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  const handleRegisterSubmit = async (e) => {
-    e.preventDefault();
-    if (!validateRegister()) {
-      triggerShake();
-      showToast('⚠️', 'Please complete all required registration fields.');
-      return;
-    }
-
-    setRegLoading(true);
-    setRegErrors(prev => ({ ...prev, general: '' }));
-
-    try {
-      const nameParts = regFullName.trim().split(/\s+/);
-      const firstName = nameParts[0] || regFullName.trim();
-      const lastName = nameParts.slice(1).join(' ') || undefined;
-
-      const response = await fetch(`${API_BASE}/auth/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username: regHandle.trim(),
-          email: regEmail.trim(),
-          password: regPassword,
-          role: regRole || 'user',
-          firstName,
-          lastName,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        const errorMsg = data.message || 'Registration failed.';
-        triggerShake();
-        const displayMsg = Array.isArray(errorMsg) ? errorMsg.join(', ') : errorMsg;
-        showToast('❌', displayMsg);
-        setRegErrors(prev => ({
-          ...prev,
-          general: displayMsg,
-        }));
-        setRegLoading(false);
-        return;
-      }
-
-      setRegLoading(false);
-      showToast('🎉', `Account @${data.username} created successfully! Please sign in.`);
-      setTimeout(() => {
-        setCurrentTab('login');
-        setLoginEmail(data.username);
-        setLoginPassword(regPassword);
-        setLoginRole(data.role || regRole);
-      }, 1000);
-    } catch (err) {
-      console.error('Registration error:', err);
-      triggerShake();
-      const failMsg = 'Unable to connect to registration server at ' + API_BASE;
-      setRegErrors(prev => ({ ...prev, general: failMsg }));
-      showToast('❌', failMsg);
-      setRegLoading(false);
-    }
-  };
-
-  // ── 6. Forgot Password State ──
-  const [forgotEmail, setForgotEmail] = useState('');
-  const [forgotError, setForgotError] = useState('');
-  const [forgotLoading, setForgotLoading] = useState(false);
-
-  const handleForgotSubmit = (e) => {
-    e.preventDefault();
-    if (!forgotEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(forgotEmail.trim())) {
-      setForgotError('Please enter a valid email address.');
-      triggerShake();
-      return;
-    }
-    setForgotError('');
-    setForgotLoading(true);
-    setTimeout(() => {
-      setForgotLoading(false);
-      setCurrentTab('forgot-success');
-    }, 900);
-  };
+  const {
+    currentTab,
+    setCurrentTab,
+    cardShake,
+    toast,
+    showToast,
+    // Login
+    loginEmail,
+    setLoginEmail,
+    loginPassword,
+    setLoginPassword,
+    loginRole,
+    setLoginRole,
+    rememberMe,
+    setRememberMe,
+    showLoginPassword,
+    setShowLoginPassword,
+    loginLoading,
+    loginErrors,
+    setLoginErrors,
+    handleLoginSubmit,
+    personas,
+    handleQuickLogin,
+    // Register
+    regFullName,
+    setRegFullName,
+    regEmail,
+    setRegEmail,
+    regHandle,
+    setRegHandle,
+    regPassword,
+    setRegPassword,
+    regConfirm,
+    setRegConfirm,
+    regRole,
+    setRegRole,
+    regTerms,
+    setRegTerms,
+    showRegPassword,
+    setShowRegPassword,
+    showRegConfirm,
+    setShowRegConfirm,
+    regLoading,
+    regErrors,
+    setRegErrors,
+    strength,
+    handleRegisterSubmit,
+    // Forgot password
+    forgotEmail,
+    setForgotEmail,
+    forgotError,
+    setForgotError,
+    forgotLoading,
+    handleForgotSubmit,
+  } = useAuthForm();
 
   return (
     <div className="login-page-container" style={{ minHeight: '100vh', width: '100%', position: 'relative', overflowX: 'hidden', overflowY: 'auto' }}>

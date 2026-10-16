@@ -4,7 +4,10 @@ import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class AppealsService {
-  findAll(): AppealRecord[] {
+  findAll(userId?: number): AppealRecord[] {
+    if (userId) {
+      return db.appeals.filter((appeal) => appeal.userId === userId);
+    }
     return db.appeals;
   }
 

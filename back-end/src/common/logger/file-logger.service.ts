@@ -2,7 +2,7 @@ import { Injectable, LoggerService } from '@nestjs/common';
 import { existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import * as winston from 'winston';
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const DailyRotateFile = require('winston-daily-rotate-file');
 
 @Injectable()

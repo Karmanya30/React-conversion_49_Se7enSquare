@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 /**
  * Reusable Navbar Component
@@ -8,6 +8,7 @@ import { Link, useLocation } from 'react-router-dom';
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -23,12 +24,14 @@ export default function Navbar() {
   }, []);
 
   const handleScrollTo = (id) => (e) => {
+    e.preventDefault();
     if (location.pathname === '/' || location.pathname === '/landing') {
       const el = document.getElementById(id);
       if (el) {
-        e.preventDefault();
         el.scrollIntoView({ behavior: 'smooth' });
       }
+    } else {
+      navigate(`/landing#${id}`);
     }
   };
 

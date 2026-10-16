@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { AppRole } from '../rbac/role.enum';
@@ -13,9 +13,10 @@ export class AppealsController {
   constructor(private readonly service: AppealsService) {}
 
   @Get()
-  @Roles(AppRole.ADMIN, AppRole.MODERATOR)
-  findAll() {
-    return this.service.findAll();
+  @Roles(AppRole.ADMIN, AppRole.MODERATOR, AppRole.COMMUNITY_MANAGER, AppRole.USER, AppRole.ORGANIZER, AppRole.OWNER)
+  findAll(@Query('userId') userId?: string) {
+    const parsedUserId = userId ? parseInt(userId, 10) : undefined;
+    return this.service.findAll(parsedUserId);
   }
 
   @Post()

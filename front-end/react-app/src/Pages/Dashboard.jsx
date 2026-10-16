@@ -1,125 +1,33 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React from 'react';
 import SideBar from '../Components/SideBar';
+import useDashboard from '../Components/platform/hooks/useDashboard';
 import '../styles/global.css';
 import '../styles/sidebar.css';
 import '../styles/dashboard.css';
 
-const API_BASE = 'http://localhost:3000/api';
-
-const DEFAULT_COMMUNITIES = [
-  { id: 1, name: 'Pro Gamers', icon: '⚡', members: 2451, description: 'Competitive gaming community' },
-  { id: 2, name: 'Dev Nexus', icon: '💻', members: 1200, description: 'Web developers and engineers' },
-];
-
-const DEFAULT_NOTIFICATIONS = [
-  { id: 1, icon: '💬', text: 'Rahul Kumar mentioned you in #general', time: '10 min ago', read: false },
-  { id: 2, icon: '📅', text: 'Gaming Hackathon starts tomorrow at 2:00 PM', time: '1 hr ago', read: false },
-  { id: 3, icon: '👥', text: 'Priya Sharma joined Pro Gamers', time: '2 hr ago', read: true },
-];
-
-const DEFAULT_EVENTS = [
-  { id: 1, title: 'Gaming Hackathon', community: 'Pro Gamers', date: 'Mar 7, 2025', time: '2:00 PM IST', type: '🏆' },
-  { id: 2, title: 'Frontend Workshop', community: 'Dev Nexus', date: 'Mar 9, 2025', time: '5:00 PM IST', type: '💻' },
-];
-
-function getCurrentUser() {
-  try {
-    const stored = localStorage.getItem('nexus_user') || localStorage.getItem('currentUser');
-    const raw = stored ? JSON.parse(stored) : {};
-    return {
-      id: raw.id || 4,
-      firstName: raw.firstName || raw.username || 'User',
-      lastName: raw.lastName || '',
-      username: raw.username || 'player01',
-      role: raw.role || 'user',
-    };
-  } catch {
-    return { id: 4, firstName: 'User', lastName: '', username: 'player01', role: 'user' };
-  }
-}
-
-function getGreeting() {
-  const h = new Date().getHours();
-  if (h < 12) return 'Good morning';
-  if (h < 17) return 'Good afternoon';
-  return 'Good evening';
-}
-
+/**
+ * Dashboard Page Component
+ * Converted from dashboard.html, preserving all styles and widgets.
+ * Architecture: UI/presentation layer orchestrating useDashboard() hook and dashboardService.
+ */
 export default function Dashboard() {
-  const navigate = useNavigate();
-  const [user] = useState(getCurrentUser);
-  const [communities, setCommunities] = useState(DEFAULT_COMMUNITIES);
-  const [notifications, setNotifications] = useState(DEFAULT_NOTIFICATIONS);
-  const [events, setEvents] = useState(DEFAULT_EVENTS);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
-  const [showSearch, setShowSearch] = useState(false);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const [commsRes, eventsRes, notifsRes] = await Promise.all([
-          fetch(`${API_BASE}/communities`, { headers: { 'x-role': user.role } }),
-          fetch(`${API_BASE}/events`, { headers: { 'x-role': user.role } }),
-          fetch(`${API_BASE}/notifications?userId=${user.id}`, { headers: { 'x-role': user.role } }),
-        ]);
-        if (commsRes.ok) {
-          const data = await commsRes.json();
-          if (Array.isArray(data) && data.length > 0) setCommunities(data.slice(0, 6));
-        }
-        if (eventsRes.ok) {
-          const data = await eventsRes.json();
-          if (Array.isArray(data) && data.length > 0) {
-            setEvents(data.slice(0, 3).map(e => ({
-              id: e.id,
-              title: e.title,
-              community: e.community || 'Community',
-              date: e.date ? new Date(e.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'TBD',
-              time: e.time || '',
-              type: '📅',
-            })));
-          }
-        }
-        if (notifsRes.ok) {
-          const notifsData = await notifsRes.json();
-          if (Array.isArray(notifsData) && notifsData.length > 0) {
-            setNotifications(notifsData.slice(0, 5).map(n => ({
-              id: n.id,
-              icon: n.type === 'reaction' ? '💬' : n.type === 'report_status' ? '🛡️' : '🔔',
-              text: n.text,
-              time: n.createdAt ? new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recently',
-              read: n.read,
-            })));
-          }
-        }
-      } catch {
-        // Fallback to default data — backend may not be running
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchData();
-  }, [user.role, user.id]);
-
-  const handleSearch = (val) => {
-    setSearchQuery(val);
-    if (!val.trim()) { setShowSearch(false); return; }
-    const lower = val.toLowerCase();
-    const results = [
-      ...communities.filter(c => c.name?.toLowerCase().includes(lower)).map(c => ({ type: 'community', label: c.name, icon: c.icon || '🏘️' })),
-      ...events.filter(e => e.title?.toLowerCase().includes(lower)).map(e => ({ type: 'event', label: e.title, icon: '📅' })),
-    ];
-    setSearchResults(results.slice(0, 6));
-    setShowSearch(true);
-  };
-
-  const markAllRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-  };
-
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const {
+    navigate,
+    user,
+    greeting,
+    communities,
+    notifications,
+    events,
+    stats,
+    unreadCount,
+    searchQuery,
+    searchResults,
+    showSearch,
+    setShowSearch,
+    handleSearch,
+    markAllRead,
+    loading,
+  } = useDashboard();
 
   return (
     <div className="app-shell">
@@ -196,7 +104,7 @@ export default function Dashboard() {
           <div className="greeting">
             <div className="greeting-text">
               <div className="greeting-name">
-                {getGreeting()}, <span className="user-name">{user.firstName}</span> 👋
+                {greeting}, <span className="user-name">{user.firstName}</span> 👋
               </div>
               <div className="greeting-sub">
                 You have {unreadCount} unread message{unreadCount !== 1 ? 's' : ''} and {events.length} upcoming event{events.length !== 1 ? 's' : ''} today.
@@ -204,7 +112,7 @@ export default function Dashboard() {
             </div>
             <div className="greeting-stats">
               <div className="g-stat">
-                <div className="g-stat-val">{communities.length}</div>
+                <div className="g-stat-val">{stats?.totalCommunities ?? communities.length}</div>
                 <div className="g-stat-label">Communities</div>
               </div>
               <div className="g-stat">
@@ -212,7 +120,7 @@ export default function Dashboard() {
                 <div className="g-stat-label">Messages</div>
               </div>
               <div className="g-stat">
-                <div className="g-stat-val">{events.length}</div>
+                <div className="g-stat-val">{stats?.totalEvents ?? events.length}</div>
                 <div className="g-stat-label">Events</div>
               </div>
             </div>
@@ -245,7 +153,7 @@ export default function Dashboard() {
                     <div className="comm-card-icon grad-purple">{comm.icon || '🏘️'}</div>
                     <div className="comm-card-name">{comm.name}</div>
                     <div className="comm-card-meta">
-                      <span>{(comm.members || 0).toLocaleString()} members</span>
+                      <span>{(comm.members || comm.memberCount || 0).toLocaleString()} members</span>
                     </div>
                   </div>
                 ))}

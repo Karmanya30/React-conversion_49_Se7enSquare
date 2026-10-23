@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { apiRequest, getStoredUser } from '../../../services/api';
 
 /**
@@ -13,6 +13,10 @@ export default function useAdminUsers(showToast) {
   const [editingUser, setEditingUser] = useState(null);
 
   const adminUser = getStoredUser();
+  const showToastRef = useRef(showToast);
+  useEffect(() => {
+    showToastRef.current = showToast;
+  }, [showToast]);
 
   const filteredUsers = useMemo(() => {
     return users.filter((u) => {
@@ -26,16 +30,21 @@ export default function useAdminUsers(showToast) {
     });
   }, [users, userSearch, userRoleFilter]);
 
-  const refreshUsers = async () => {
+  const refreshUsers = useCallback(async () => {
     try {
       const data = await apiRequest('/users');
       setUsers(Array.isArray(data) ? data : []);
     } catch { /* leave current list */ }
-  };
+  }, []);
 
-  const updateUserRole = async (userId, newRole) => {
+  // Initial load once on mount
+  useEffect(() => {
+    refreshUsers();
+  }, [refreshUsers]);
+
+  const updateUserRole = useCallback(async (userId, newRole) => {
     if (userId === adminUser?.id) {
-      showToast('❌ Cannot change your own role');
+      showToastRef.current?.('❌ Cannot change your own role');
       return;
     }
     try {
@@ -44,16 +53,16 @@ export default function useAdminUsers(showToast) {
         body: JSON.stringify({ role: newRole }),
       });
       setEditingUser(null);
-      showToast(`✓ Role updated to ${newRole}`);
+      showToastRef.current?.(`✓ Role updated to ${newRole}`);
       await refreshUsers();
     } catch (err) {
-      showToast(`❌ ${err.message}`);
+      showToastRef.current?.(`❌ ${err.message}`);
     }
-  };
+  }, [adminUser?.id, refreshUsers]);
 
-  const suspendUser = async (userId, reason) => {
+  const suspendUser = useCallback(async (userId, reason) => {
     if (userId === adminUser?.id) {
-      showToast('❌ Cannot suspend your own account');
+      showToastRef.current?.('❌ Cannot suspend your own account');
       return;
     }
     const targetUser = users.find((u) => u.id === userId);
@@ -65,16 +74,16 @@ export default function useAdminUsers(showToast) {
         method: 'POST',
         body: JSON.stringify({ reason: r.trim() }),
       });
-      showToast('⚠️ User suspended');
+      showToastRef.current?.('⚠️ User suspended');
       await refreshUsers();
     } catch (err) {
-      showToast(`❌ ${err.message}`);
+      showToastRef.current?.(`❌ ${err.message}`);
     }
-  };
+  }, [adminUser?.id, users, refreshUsers]);
 
-  const banUser = async (userId, reason) => {
+  const banUser = useCallback(async (userId, reason) => {
     if (userId === adminUser?.id) {
-      showToast('❌ Cannot ban your own account');
+      showToastRef.current?.('❌ Cannot ban your own account');
       return;
     }
     const targetUser = users.find((u) => u.id === userId);
@@ -86,14 +95,14 @@ export default function useAdminUsers(showToast) {
         method: 'POST',
         body: JSON.stringify({ reason: r.trim() }),
       });
-      showToast(`⛔ User banned`);
+      showToastRef.current?.(`⛔ User banned`);
       await refreshUsers();
     } catch (err) {
-      showToast(`❌ ${err.message}`);
+      showToastRef.current?.(`❌ ${err.message}`);
     }
-  };
+  }, [adminUser?.id, users, refreshUsers]);
 
-  const reinstateUser = async (userId) => {
+  const reinstateUser = useCallback(async (userId) => {
     const targetUser = users.find((u) => u.id === userId);
     if (!window.confirm(`Reinstate ${targetUser?.username || `user #${userId}`}? Their account will be unlocked.`)) return;
     try {
@@ -101,12 +110,12 @@ export default function useAdminUsers(showToast) {
         method: 'POST',
         body: JSON.stringify({ reason: 'Reinstated by admin' }),
       });
-      showToast('✅ User reinstated');
+      showToastRef.current?.('✅ User reinstated');
       await refreshUsers();
     } catch (err) {
-      showToast(`❌ ${err.message}`);
+      showToastRef.current?.(`❌ ${err.message}`);
     }
-  };
+  }, [users, refreshUsers]);
 
   return {
     users,

@@ -1,6 +1,15 @@
+const storedUser = (() => {
+    try {
+        return JSON.parse(localStorage.getItem('nexus_user') || localStorage.getItem('currentUser') || '{}');
+    } catch {
+        return {};
+    }
+})();
+
 fetch("http://localhost:3000/api/users", {
     headers: {
-        "x-role": "admin"
+        "x-role": storedUser.role || "admin",
+        ...(storedUser.id ? { "x-user-id": String(storedUser.id) } : {})
     }
 })
     .then(response => response.json())

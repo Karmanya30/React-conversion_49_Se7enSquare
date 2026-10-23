@@ -3,29 +3,8 @@ import {
   URL_PATTERN, CATEGORIES, ICONS, BANNERS, DEFAULT_CHANNELS, DEFAULT_PERMISSIONS,
 } from '../data/createCommunityOptions';
 
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
+import { apiRequest, getStoredUser } from '../../../services/api';
 
-function getCurrentUser() {
-  try {
-    const raw = JSON.parse(
-      localStorage.getItem('user') ||
-      localStorage.getItem('nexus_user') ||
-      localStorage.getItem('currentUser') ||
-      '{}'
-    );
-    return { id: raw.id, username: raw.username, role: raw.role };
-  } catch { return {}; }
-}
-
-// Extracts the human-readable error message a NestJS response carries
-// (validation failures arrive as arrays of strings).
-async function apiErrorMessage(res) {
-  try {
-    const body = await res.json();
-    const msg = body?.message;
-    return Array.isArray(msg) ? msg.join(', ') : (msg || `HTTP ${res.status}`);
-  } catch { return `HTTP ${res.status}`; }
-}
 
 /**
  * Manages form state, validation, submission guard, and channel CRUD for
@@ -71,9 +50,7 @@ export default function useCreateCommunity(navigate) {
   };
 
   useEffect(() => {
-    const role = getCurrentUser().role || 'user';
-    fetch(`${API_BASE}/communities`, { headers: { 'x-role': role } })
-      .then((r) => (r.ok ? r.json() : []))
+    apiRequest('/communities')
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) {
           setAllCommunities(data);
@@ -147,8 +124,8 @@ export default function useCreateCommunity(navigate) {
 
   const submitCreateCommunity = async () => {
     if (submitting) return;
-    const user = getCurrentUser();
-    if (!user.id) {
+    const user = getStoredUser();
+    if (!user || user.id === undefined || user.id === null) {
       showToast('⚠️ You must be logged in to create a community.');
       return;
     }
@@ -176,20 +153,11 @@ export default function useCreateCommunity(navigate) {
     };
 
     try {
-      const res = await fetch(`${API_BASE}/communities`, {
+      const created = await apiRequest('/communities', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-role': user.role || 'user' },
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) {
-        // Real HTTP rejection (validation error, free-plan community cap, …) —
-        // surface it instead of faking success.
-        showToast(`⚠️ Could not create community: ${await apiErrorMessage(res)}`);
-        return;
-      }
-
-      const created = await res.json();
       if (!created || !created.id) {
         showToast('⚠️ Unexpected response from the server.');
         return;
@@ -208,7 +176,7 @@ export default function useCreateCommunity(navigate) {
       showToast('🎉 Community created! Redirecting…');
       setTimeout(() => { navigate(`/community-page?id=${created.id}`); }, 1000);
     } catch (err) {
-      showToast(`⚠️ Could not reach the backend: ${err.message}`);
+      showToast(`⚠️ Could not create community: ${err.message}`);
     } finally {
       setSubmitting(false);
     }
@@ -218,32 +186,20 @@ export default function useCreateCommunity(navigate) {
     if (!standaloneChName.trim()) { showToast('⚠️ Channel name is required'); return; }
     if (!standaloneChTopic.trim()) { showToast('⚠️ Channel topic is required'); return; }
     if (!channelCommId) { showToast('⚠️ Select a community first'); return; }
-    const user = getCurrentUser();
-    const role = user.role || 'user';
     showToast('💬 Creating channel…');
     try {
       // Channels live on the community record — no dedicated /channels API.
-      const commRes = await fetch(`${API_BASE}/communities/${channelCommId}`, { headers: { 'x-role': role } });
-      if (!commRes.ok) {
-        showToast(`⚠️ Could not load community: ${await apiErrorMessage(commRes)}`);
-        return;
-      }
-      const community = await commRes.json();
-      const existing = Array.isArray(community.channels) ? community.channels : [];
+      const community = await apiRequest(`/communities/${channelCommId}`);
+      const existing = Array.isArray(community?.channels) ? community.channels : [];
       const newChannel = {
         id: String(Date.now()),
         name: standaloneChName.trim().toLowerCase().replace(/\s+/g, '-'),
         type: standaloneChType,
       };
-      const patchRes = await fetch(`${API_BASE}/communities/${channelCommId}`, {
+      await apiRequest(`/communities/${channelCommId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', 'x-role': role },
         body: JSON.stringify({ channels: [...existing, newChannel] }),
       });
-      if (!patchRes.ok) {
-        showToast(`⚠️ Could not create channel: ${await apiErrorMessage(patchRes)}`);
-        return;
-      }
       showToast(`✅ #${newChannel.name} created in ${community.name}!`);
       setTimeout(() => { navigate(`/community-page?id=${channelCommId}`); }, 1000);
     } catch (err) {

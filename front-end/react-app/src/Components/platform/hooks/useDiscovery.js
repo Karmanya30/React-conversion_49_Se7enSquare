@@ -1,18 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { memberCountOf, onlineCountOf } from '../data/discoveryData';
 
-// Use Vite's built-in proxy (/api -> http://localhost:3000) to avoid CORS issues.
-const API_BASE = '/api';
+import { apiRequest, getStoredUser } from '../../../services/api';
 
-function getCurrentUser() {
-  try {
-    const stored = localStorage.getItem('nexus_user') || localStorage.getItem('currentUser');
-    const user = stored ? JSON.parse(stored) : {};
-    // Always ensure role is set — backend rejects requests without a valid x-role header.
-    if (!user.role) user.role = 'user';
-    return user;
-  } catch { return { role: 'user' }; }
-}
 
 function getJoinedIdList() {
   try {
@@ -26,14 +16,6 @@ function setJoinedIdList(idStr, joined) {
     ? [...new Set([...getJoinedIdList(), idStr])]
     : getJoinedIdList().filter(x => x !== idStr);
   localStorage.setItem('nexus_joined_communities', JSON.stringify(next));
-}
-
-async function apiErrorMessage(res) {
-  try {
-    const body = await res.json();
-    const msg = body?.message;
-    return Array.isArray(msg) ? msg.join(', ') : (msg || `HTTP ${res.status}`);
-  } catch { return `HTTP ${res.status}`; }
 }
 
 /**
@@ -60,53 +42,39 @@ export default function useDiscovery() {
   useEffect(() => {
     let cancelled = false;
     async function fetchData() {
-      const user = getCurrentUser();
-      const role = user.role; // always 'user' or better thanks to getCurrentUser()
-      const headers = { 'x-role': role };
+      const user = getStoredUser();
 
       // --- 1. Fetch communities (primary) ---
       try {
-        const commsRes = await fetch(`${API_BASE}/communities`, { headers });
+        const data = await apiRequest('/communities');
         if (cancelled) return;
-        if (commsRes.ok) {
-          const data = await commsRes.json();
-          setCommunities(Array.isArray(data) ? data : []);
-          setLoadWarning('');
-        } else {
-          setCommunities([]);
-          setLoadWarning(`Could not load communities (${commsRes.status}).`);
-        }
-      } catch {
+        setCommunities(Array.isArray(data) ? data : []);
+        setLoadWarning('');
+      } catch (err) {
         if (!cancelled) {
           setCommunities([]);
-          setLoadWarning('Backend unreachable. Please verify the server is running.');
+          setLoadWarning(err.message || 'Could not load communities.');
         }
       } finally {
         if (!cancelled) setLoading(false);
       }
 
       // --- 2. Fetch memberships independently (non-critical) ---
-      if (user.id) {
+      if (user?.id) {
         try {
-          const memsRes = await fetch(`${API_BASE}/memberships?userId=${user.id}`, { headers });
-          if (!cancelled && memsRes.ok) {
-            const mems = await memsRes.json();
-            if (Array.isArray(mems)) {
-              const ids = new Set(getJoinedIdList());
-              mems.forEach(m => ids.add(String(m.communityId)));
-              if (!cancelled) setJoinedIds(ids);
-            }
+          const mems = await apiRequest(`/memberships?userId=${user.id}`);
+          if (!cancelled && Array.isArray(mems)) {
+            const ids = new Set(getJoinedIdList());
+            mems.forEach(m => ids.add(String(m.communityId)));
+            if (!cancelled) setJoinedIds(ids);
           }
         } catch { /* ignore — user just won't see server-side joined state */ }
       }
 
       // --- 3. Fetch events independently (non-critical) ---
       try {
-        const eventsRes = await fetch(`${API_BASE}/events`, { headers });
-        if (!cancelled && eventsRes.ok) {
-          const events = await eventsRes.json();
-          if (Array.isArray(events) && !cancelled) setEventCount(events.length);
-        }
+        const events = await apiRequest('/events');
+        if (Array.isArray(events) && !cancelled) setEventCount(events.length);
       } catch { /* ignore — event count stays null */ }
     }
     fetchData();
@@ -154,12 +122,11 @@ export default function useDiscovery() {
 
   const toggleJoin = async (id, e) => {
     e.stopPropagation();
-    const user = getCurrentUser();
-    if (!user.id) {
+    const user = getStoredUser();
+    if (!user || user.id === undefined || user.id === null) {
       showToast('⚠️ Please log in to join communities.');
       return;
     }
-    const role = user.role || 'user';
     const idStr = String(id);
     const isJoined = joinedIds.has(idStr);
 
@@ -173,30 +140,22 @@ export default function useDiscovery() {
 
     try {
       if (isJoined) {
-        const memsRes = await fetch(`${API_BASE}/memberships?userId=${user.id}`, { headers: { 'x-role': role } });
-        if (!memsRes.ok) throw new Error(await apiErrorMessage(memsRes));
-        const mems = await memsRes.json();
+        const mems = await apiRequest(`/memberships?userId=${user.id}`);
         const target = Array.isArray(mems)
           ? mems.find(m => String(m.communityId) === idStr && String(m.userId) === String(user.id))
           : null;
         if (target) {
-          const delRes = await fetch(`${API_BASE}/memberships/${target.id}`, {
-            method: 'DELETE',
-            headers: { 'x-role': role },
-          });
-          if (!delRes.ok) throw new Error(await apiErrorMessage(delRes));
+          await apiRequest(`/memberships/${target.id}`, { method: 'DELETE' });
         }
         showToast('Left community.');
       } else {
-        const res = await fetch(`${API_BASE}/memberships`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-role': role },
-          body: JSON.stringify({ userId: Number(user.id), communityId: Number(id) }),
-        });
-        if (!res.ok) {
-          const msg = await apiErrorMessage(res);
-          // Duplicate joins are harmless — the membership already exists.
-          if (!/already a member/i.test(msg)) throw new Error(msg);
+        try {
+          await apiRequest('/memberships', {
+            method: 'POST',
+            body: JSON.stringify({ userId: Number(user.id), communityId: Number(id) }),
+          });
+        } catch (postErr) {
+          if (!/already a member/i.test(postErr.message)) throw postErr;
         }
         const comm = communities.find(c => String(c.id) === idStr);
         showToast(comm ? `Welcome to ${comm.name}! ⚡` : 'Joined community.');

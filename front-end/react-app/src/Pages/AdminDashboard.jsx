@@ -25,13 +25,13 @@ function getAdminUser() {
   try {
     const raw = getStoredUser() || {};
     return {
-      id: raw.id || 1,
+      id: raw.id,
       role: raw.role || 'admin',
       firstName: raw.firstName || raw.name?.split(' ')[0] || 'Admin',
       username: raw.username || 'admin',
     };
   } catch {
-    return { id: 1, role: 'admin', firstName: 'Admin', username: 'admin' };
+    return { id: undefined, role: 'admin', firstName: 'Admin', username: 'admin' };
   }
 }
 

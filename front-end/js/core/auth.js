@@ -74,8 +74,11 @@ function normalizeUser(rawUser) {
     if (!rawUser) return null;
     const names = splitNameParts(rawUser);
     const username = rawUser.username || rawUser.handle || [names.firstName, names.lastName].filter(Boolean).join("").toLowerCase() || "user";
+    const rawId = rawUser.id ?? rawUser.userId ?? rawUser._id;
+    const parsedId = rawId !== undefined && rawId !== null && !isNaN(Number(rawId)) ? Number(rawId) : rawId;
     return {
         ...rawUser,
+        id: parsedId,
         firstName: names.firstName,
         lastName: names.lastName,
         username,
@@ -146,9 +149,10 @@ function renderUserUI() {
     });
 }
 
-function loginUser(username, role) {
+function loginUser(username, role, id = null) {
     const normalizedRole = normalizeRole(role);
     return persistCurrentUser({
+        id: id !== null && id !== undefined ? Number(id) : undefined,
         firstName: username,
         lastName: "",
         username,

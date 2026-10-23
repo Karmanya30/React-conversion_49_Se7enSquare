@@ -49,7 +49,10 @@ export function useOrganizerData() {
     let commsData;
     let regsData = [];
 
-    const headers = { 'x-role': currentUser?.role || 'organizer' };
+    const headers = {
+      'x-role': currentUser?.role || 'organizer',
+      ...(currentUser?.id ? { 'x-user-id': String(currentUser.id) } : {}),
+    };
 
     try {
       const [evRes, commRes, regRes] = await Promise.all([
@@ -155,6 +158,7 @@ export function useOrganizerData() {
         headers: {
           'Content-Type': 'application/json',
           'x-role': currentUser.role || 'organizer',
+          ...(currentUser?.id ? { 'x-user-id': String(currentUser.id) } : {}),
         },
         body: JSON.stringify({
           eventId: Number(eventId),

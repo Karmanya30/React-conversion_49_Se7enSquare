@@ -1,10 +1,12 @@
-// Centralized API service for Event Management with automated x-role injection.
-import { API_BASE, getRole, EVENT_STATUSES } from '../utils/constants';
+// Centralized API service for Event Management with automated x-role and x-user-id injection.
+import { API_BASE, getRole, getCurrentUser, EVENT_STATUSES } from '../utils/constants';
 
 function getHeaders(custom = {}) {
+  const user = getCurrentUser();
   return {
     'Content-Type': 'application/json',
     'x-role': getRole(),
+    ...(user?.id !== undefined && user?.id !== null ? { 'x-user-id': String(user.id) } : {}),
     ...custom,
   };
 }

@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-
-const API_BASE = 'http://localhost:3000/api';
+import { apiRequest } from '../../../services/api';
 
 /**
  * Custom hook managing the administrative audit log feed with genuine backend persistence.
@@ -12,24 +11,19 @@ export default function useAuditLog(adminUsername = 'admin01') {
     let cancelled = false;
     async function fetchAuditLog() {
       try {
-        const res = await fetch(`${API_BASE}/audit-log`, {
-          headers: { 'x-role': 'admin' },
-        });
-        if (!cancelled && res.ok) {
-          const data = await res.json();
-          if (Array.isArray(data)) {
-            setAuditLog(
-              data.map((l) => ({
-                id: l.id,
-                time: l.createdAt
-                  ? new Date(l.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                  : 'Just now',
-                admin: l.actor || adminUsername,
-                action: l.action,
-                type: l.target || 'general',
-              }))
-            );
-          }
+        const data = await apiRequest('/audit-log');
+        if (!cancelled && Array.isArray(data)) {
+          setAuditLog(
+            data.map((l) => ({
+              id: l.id,
+              time: l.createdAt
+                ? new Date(l.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                : 'Just now',
+              admin: l.actor || adminUsername,
+              action: l.action,
+              type: l.target || 'general',
+            }))
+          );
         }
       } catch {}
     }
@@ -49,12 +43,8 @@ export default function useAuditLog(adminUsername = 'admin01') {
       setAuditLog((prev) => [newEntry, ...prev]);
 
       try {
-        await fetch(`${API_BASE}/audit-log`, {
+        await apiRequest('/audit-log', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-role': 'admin',
-          },
           body: JSON.stringify({
             action: action.slice(0, 95),
             actor: adminUsername,

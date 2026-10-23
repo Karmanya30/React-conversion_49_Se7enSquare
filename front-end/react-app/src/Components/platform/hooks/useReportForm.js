@@ -1,24 +1,8 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
+import { apiRequest, getStoredUser } from '../../../services/api';
 
-function getUser() {
-  try {
-    const raw = JSON.parse(
-      localStorage.getItem('user') ||
-      localStorage.getItem('currentUser') ||
-      localStorage.getItem('nexus_user') ||
-      '{}'
-    );
-    return {
-      id: raw.id || 4,
-      role: raw.role || 'user',
-    };
-  } catch {
-    return { id: 4, role: 'user' };
-  }
-}
 
 /**
  * Custom hook managing the 4-step report state, search params, API submissions, and form resets.
@@ -41,7 +25,7 @@ export default function useReportForm() {
   });
 
   const [searchParams] = useSearchParams();
-  const user = getUser();
+  const user = getStoredUser();
 
   const ctxUser = searchParams.get('user');
   const ctxUserName = searchParams.get('uname') ? decodeURIComponent(searchParams.get('uname')) : null;
@@ -79,24 +63,23 @@ export default function useReportForm() {
       return;
     }
     try {
-      const res = await fetch(`${API_BASE}/users?search=${encodeURIComponent(val)}`, {
-        headers: { 'x-role': user.role },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setSearchResults(Array.isArray(data) ? data.slice(0, 5) : []);
-        return;
-      }
-    } catch {}
-    setSearchResults([]);
+      const data = await apiRequest(`/users?search=${encodeURIComponent(val)}`);
+      setSearchResults(Array.isArray(data) ? data.slice(0, 5) : []);
+    } catch {
+      setSearchResults([]);
+    }
   };
 
   const submitReport = async () => {
     if (!selectedReason || !confirmed) return;
+    if (!user || user.id === undefined || user.id === null) {
+      showToast('⚠️ You must be logged in to submit a report.');
+      return;
+    }
     setSubmitting(true);
     const reasonText = (selectedReason + (additionalContext ? `: ${additionalContext}` : '')).slice(0, 195);
     const reportData = {
-      reporterId: Number(user.id || 4),
+      reporterId: Number(user.id),
       targetType:
         selectedTarget?.type === 'post' || selectedTarget?.type === 'community'
           ? selectedTarget.type
@@ -105,13 +88,11 @@ export default function useReportForm() {
       reason: reasonText.length >= 8 ? reasonText : `${reasonText} - reported by user`,
     };
     try {
-      const res = await fetch(`${API_BASE}/reports`, {
+      const data = await apiRequest('/reports', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-role': user.role },
         body: JSON.stringify(reportData),
       });
-      if (res.ok) {
-        const data = await res.json();
+      if (data && data.id) {
         setRefId(`RPT-${data.id}`);
       } else {
         setRefId(`RPT-${Date.now()}`);

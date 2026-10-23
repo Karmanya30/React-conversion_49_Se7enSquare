@@ -30,7 +30,7 @@ import { getHomeRoute } from './services/roleAccess';
 function ProtectedRoute({ children, allowedRoles, allowOwner = false }) {
   const user = authService.getCurrentUser();
 
-  if (!user || !user.username) {
+  if (!user || !user.username || user.id === undefined || user.id === null) {
     return <Navigate to="/login" replace />;
   }
 

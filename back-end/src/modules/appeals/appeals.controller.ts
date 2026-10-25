@@ -36,4 +36,22 @@ export class AppealsController {
   updateStatus(@Param('id', ParseIntPipe) id: number, @Body() payload: UpdateAppealStatusDto) {
     return this.service.updateStatus(id, payload.status);
   }
+
+  @Post(':id/approved')
+  @Roles(AppRole.ADMIN, AppRole.MODERATOR)
+  approveAppealPost(@Param('id', ParseIntPipe) id: number) {
+    return this.service.updateStatus(id, 'approved');
+  }
+
+  @Post(':id/rejected')
+  @Roles(AppRole.ADMIN, AppRole.MODERATOR)
+  rejectAppealPost(@Param('id', ParseIntPipe) id: number) {
+    return this.service.updateStatus(id, 'rejected');
+  }
+
+  @Post(':id/:status')
+  @Roles(AppRole.ADMIN, AppRole.MODERATOR)
+  reviewAppealPost(@Param('id', ParseIntPipe) id: number, @Param('status') status: any) {
+    return this.service.updateStatus(id, status);
+  }
 }

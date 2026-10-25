@@ -18,8 +18,9 @@ export const appealService = {
   },
 
   async reviewAppeal(appealId, status) {
-    return await apiRequest(`/appeals/${appealId}/${status}`, {
-      method: 'POST',
+    return await apiRequest(`/appeals/${appealId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
     });
   },
 

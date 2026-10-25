@@ -37,6 +37,12 @@ export default function ReviewStep({
               {selectedTarget?.name || selectedTarget?.text || `${selectedTarget?.type} #${selectedTarget?.id}`}
             </div>
           </div>
+          {selectedTarget?.type === 'message' && selectedTarget?.author && (
+            <div className="review-row">
+              <div className="review-key">Reported User</div>
+              <div className="review-val red" id="rvReportedUser">@{selectedTarget.author}</div>
+            </div>
+          )}
           <div className="review-row">
             <div className="review-key">Violation Reason</div>
             <div className="review-val red" id="rvReason">🚫 {selectedReason}</div>

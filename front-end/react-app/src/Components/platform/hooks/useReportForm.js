@@ -59,7 +59,7 @@ export default function useReportForm() {
   const [userSearch, setUserSearch] = useState('');
   const [selectedTarget, setSelectedTarget] = useState(() => {
     if (ctxUser) return { type: 'user', id: ctxUser, name: ctxUserName || `User #${ctxUser}` };
-    if (ctxMsg) return { type: 'message', id: ctxMsg, text: ctxMsgText };
+    if (ctxMsg) return { type: 'message', id: ctxMsg, text: ctxMsgText, author: ctxUserName || null };
     if (ctxComm) return { type: 'community', id: ctxComm, name: ctxCommName };
     return null;
   });

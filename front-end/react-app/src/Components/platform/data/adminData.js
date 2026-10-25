@@ -18,6 +18,7 @@ export const DEFAULT_STATS = {
   escalatedReports: 0,
   events: 0,
   appeals: 0,
+  applications: 0,
   messages: 0,
 };
 
@@ -33,6 +34,6 @@ export function getStatCards(stats) {
     { id: 'stat-reports',  label: 'Escalated Reports',  val: stats.escalatedReports || 0,  icon: '🛡️', bg: 'bg-orange', page: 'escalated-reports' },
     { id: 'stat-events',   label: 'Active Events',      val: stats.events || 0,            icon: '📅', bg: 'bg-green',  page: 'events-mgmt' },
     { id: 'stat-appeals',  label: 'Open Appeals',       val: stats.appeals || 0,           icon: '⚖️', bg: 'bg-purple', page: 'appeals' },
-    { id: 'stat-msgs',     label: 'Messages',           val: (stats.messages || 0).toLocaleString(), icon: '💬', bg: 'bg-cyan', page: 'overview' },
+    { id: 'stat-apps',     label: 'Applications',       val: stats.applications ?? stats.messages ?? 0, icon: '📋', bg: 'bg-cyan', page: 'applications' },
   ];
 }

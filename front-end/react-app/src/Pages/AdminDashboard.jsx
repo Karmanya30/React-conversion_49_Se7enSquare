@@ -131,9 +131,10 @@ export default function AdminDashboard() {
       escalatedReports: reports.filter((r) => r.status === 'escalated').length,
       events: events.filter((e) => e.status === 'approved').length,
       appeals: appeals.filter((a) => a.status === 'pending').length,
+      applications: (organizerApps?.filter((a) => a.status === 'pending').length || 0) + (moderatorApps?.filter((a) => a.status === 'pending').length || 0) || (organizerApps?.length || 0) + (moderatorApps?.length || 0),
       messages: prev.messages || 0,
     }));
-  }, [users, communities, reports, events, appeals]);
+  }, [users, communities, reports, events, appeals, organizerApps, moderatorApps]);
 
   const currentPage = PAGES.find((p) => p.id === activePage) || PAGES[0];
 

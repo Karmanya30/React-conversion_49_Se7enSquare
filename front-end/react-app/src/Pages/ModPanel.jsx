@@ -10,7 +10,7 @@ import ReportDetailView  from './ModPanel/components/ReportDetailView';
 import ModActionPanel    from './ModPanel/components/ModActionPanel';
 
 /**
- * ModPanel page — thin orchestrator.
+ * ModPanel page - thin orchestrator.
  * All state, fetching, and action logic lives in useModPanel().
  */
 export default function ModPanel() {
@@ -19,10 +19,10 @@ export default function ModPanel() {
   return (
     <div className="app-shell">
       <SideBar />
-      <div className="main">
+      <div className="mp-main">
         <ModHeader user={m.user} navigate={m.navigate} />
 
-        <div className="panel-layout">
+        <div className="mp-panel-layout">
           <ReportQueueList
             QUEUE_TABS={m.QUEUE_TABS}
             activeQTab={m.activeQTab}
@@ -53,7 +53,7 @@ export default function ModPanel() {
           />
         </div>
 
-        <div className={`toast${m.toast.show ? ' show' : ''}`} id="toast">
+        <div className={`mp-toast${m.toast.show ? ' show' : ''}`} id="toast">
           <span>{m.toast.msg}</span>
         </div>
       </div>

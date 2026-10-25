@@ -1,8 +1,23 @@
 import React from 'react';
 
+const ACTION_STYLES = {
+  warn: 'warn',
+  mute: 'mute',
+  ban_temp: 'ban',
+  ban_perm: 'ban',
+  dismiss: 'dismiss',
+};
+
+const ACTION_ICONS = {
+  warn: '⚠️',
+  mute: '🔇',
+  ban_temp: '⏳',
+  ban_perm: '🚫',
+  dismiss: '✅',
+};
+
 /**
- * Right panel — queue overview stats and recent actions list.
- * Also renders the action buttons panel when a report is selected and unresolved.
+ * Right panel - action buttons, queue stats, and recent actions history.
  */
 export default function ModActionPanel({
   selectedReport,
@@ -14,71 +29,90 @@ export default function ModActionPanel({
   recentActions,
 }) {
   return (
-    <>
-      {/* Action buttons for selected unresolved report */}
-      {selectedReport && selectedReport.status !== 'resolved' && (
-        <div className="actions-panel" style={{ marginBottom: '0' }}>
-          <div className="ap-title">Take Action</div>
+    <div className="mp-action-panel">
+      {/* ---- Action Section ---- */}
+      {selectedReport && selectedReport.status !== 'resolved' ? (
+        <div className="mp-ap-section">
+          <div className="mp-ap-section-title">Take Action</div>
+
           {selectedReport.status === 'pending' && (
             <button
-              className="ap-btn ap-btn-review"
+              className="mp-btn-review"
               onClick={() => onMoveToReview(selectedReport.id)}
-              style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', color: '#818cf8', borderRadius: '8px', padding: '10px 16px', cursor: 'pointer', fontWeight: 600, fontSize: '13px', marginBottom: '12px', width: '100%' }}
             >
-              📋 Move to In Review
+              🔍 Move to In Review
             </button>
           )}
-          <div className="actions-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+
+          <div className="mp-actions-grid">
             {MOD_ACTIONS.map(({ label, action }) => (
               <button
                 key={action}
-                className={`ap-btn${action === 'ban_perm' ? ' ap-btn-danger' : action === 'dismiss' ? ' ap-btn-dismiss' : ''}`}
+                className={`mp-act-btn ${ACTION_STYLES[action] || 'dismiss'}`}
                 onClick={() => onTakeAction(label, selectedReport.id)}
                 disabled={processing}
-                style={{
-                  padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border,rgba(255,255,255,0.08))',
-                  background: action === 'ban_perm' ? 'rgba(255,68,68,0.1)' : action === 'dismiss' ? 'rgba(52,211,153,0.1)' : 'var(--bg-card,#151d2f)',
-                  color: action === 'ban_perm' ? '#f87171' : action === 'dismiss' ? '#34d399' : 'var(--text-secondary,#ccc)',
-                  cursor: 'pointer', fontSize: '13px', fontWeight: 600, transition: 'all 0.2s',
-                }}
+                title={label}
               >
-                {label}
+                <span className="mp-act-btn-icon">{ACTION_ICONS[action] || '⚡'}</span>
+                <span>{label}</span>
               </button>
             ))}
           </div>
         </div>
+      ) : (
+        <div className="mp-ap-section">
+          <div className="mp-ap-section-title">Take Action</div>
+          <div style={{ fontSize: '12px', color: '#334155', textAlign: 'center', padding: '12px 0' }}>
+            {selectedReport?.status === 'resolved'
+              ? '✅ Report is resolved'
+              : 'Select a report from the queue'}
+          </div>
+        </div>
       )}
 
-      {/* Stats panel */}
-      <div className="stats-panel">
-        <div className="sp-title">Queue Overview</div>
-        {[
-          { label: 'Pending',   count: queueCounts.pending  || 0, color: '#f59e0b' },
-          { label: 'In Review', count: queueCounts.review   || 0, color: '#6366f1' },
-          { label: 'Resolved',  count: queueCounts.resolved || 0, color: '#34d399' },
-        ].map(stat => (
-          <div key={stat.label} className="sp-stat">
-            <div className="sp-stat-label">{stat.label}</div>
-            <div className="sp-stat-val" style={{ color: stat.color, fontWeight: 700, fontSize: '24px' }}>
-              {stat.count}
+      {/* ---- Stats Section ---- */}
+      <div className="mp-ap-section">
+        <div className="mp-ap-section-title">Queue Overview</div>
+        <div className="mp-stats-grid">
+          <div className="mp-stat-card">
+            <div className="mp-stat-val" style={{ color: '#fbbf24' }}>
+              {queueCounts.pending || 0}
             </div>
+            <div className="mp-stat-label">Pending</div>
           </div>
-        ))}
+          <div className="mp-stat-card">
+            <div className="mp-stat-val" style={{ color: '#818cf8' }}>
+              {queueCounts.reviewed || 0}
+            </div>
+            <div className="mp-stat-label">Review</div>
+          </div>
+          <div className="mp-stat-card">
+            <div className="mp-stat-val" style={{ color: '#34d399' }}>
+              {queueCounts.resolved || 0}
+            </div>
+            <div className="mp-stat-label">Resolved</div>
+          </div>
+        </div>
+      </div>
 
-        <div className="sp-title" style={{ marginTop: '24px' }}>Recent Actions</div>
+      {/* ---- Recent Actions Section ---- */}
+      <div className="mp-recent-actions">
+        <div className="mp-recent-section-title">Recent Actions</div>
+
         {recentActions.length === 0 ? (
-          <div style={{ padding: '12px 0', color: 'var(--text-3,#666)', fontSize: '12px' }}>
-            No recent actions recorded.
-          </div>
+          <div className="mp-no-actions">No actions recorded yet</div>
         ) : (
           recentActions.map(r => (
-            <div key={r.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--border,rgba(255,255,255,0.05))', fontSize: '12px' }}>
-              <div style={{ fontWeight: 600, color: 'var(--text-secondary,#ccc)' }}>{r.action}</div>
-              <div style={{ color: 'var(--text-3,#666)', marginTop: '2px' }}>@{r.reportedUser} · {r.ref}</div>
+            <div key={r.id} className="mp-recent-item">
+              <div className="mp-recent-dot" />
+              <div className="mp-recent-info">
+                <div className="mp-recent-action">{r.action}</div>
+                <div className="mp-recent-meta">@{r.reportedUser} · {r.ref}</div>
+              </div>
             </div>
           ))
         )}
       </div>
-    </>
+    </div>
   );
 }

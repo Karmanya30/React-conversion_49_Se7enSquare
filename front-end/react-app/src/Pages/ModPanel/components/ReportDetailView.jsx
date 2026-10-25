@@ -1,83 +1,109 @@
 import React from 'react';
 
+const TYPE_ICONS = {
+  message: '💬',
+  user: '👤',
+};
+
 /**
- * Center panel — report detail: reporter info, reason card, context quote, action note textarea.
+ * Center panel - modern report detail view with glassmorphism cards.
  */
 export default function ReportDetailView({ selectedReport, actionNote, onActionNoteChange }) {
   if (!selectedReport) {
     return (
-      <div className="detail-panel" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-3,#666)', fontSize: '14px' }}>
-        Select a report from the queue to review.
+      <div className="mp-detail-panel">
+        <div className="mp-detail-empty">
+          <div className="mp-detail-empty-icon">📋</div>
+          <div className="mp-detail-empty-text">Select a report to review</div>
+        </div>
       </div>
     );
   }
 
+  const statusClass = `status-${selectedReport.status}`;
+
   return (
-    <div className="detail-panel">
-      <div className="dp-header">
-        <div className="dp-title" id="dpTitle">
-          {selectedReport.ref} — @{selectedReport.reportedUser} in {selectedReport.channel}
-        </div>
-        <div className="dp-action" id="dpAction">
-          {selectedReport.action ? `Last action: ${selectedReport.action}` : 'Last action: None'}
-        </div>
-      </div>
-
-      <div className="dp-body">
-        <div id="tabContent">
-          <div className="reporter-row">
-            <div className="reporter-av grad-violet" style={{ background: '#6366f1', color: '#fff', fontWeight: 700, width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              AM
-            </div>
-            <div className="reporter-info">
-              <div className="reporter-name">Reported by: Anonymous</div>
-              <div className="reporter-sub">
-                {selectedReport.date} · via {selectedReport.type === 'message' ? 'Message' : 'Profile'} Report
-              </div>
-            </div>
-            <span className="reporter-anon">🔒 Anonymous</span>
+    <div className="mp-detail-panel">
+      {/* Header */}
+      <div className="mp-dp-header">
+        <div className="mp-dp-top">
+          <div className="mp-dp-title" id="dpTitle">
+            {selectedReport.ref} — @{selectedReport.reportedUser}
           </div>
-
-          <div className="reason-card">
-            <div className="rc-header">
-              <div className="rc-icon">🚫</div>
-              <div className="rc-title">{selectedReport.reason}</div>
-            </div>
-            <div className="rc-desc">
-              {selectedReport.type === 'message'
-                ? 'Content that violates community guidelines.'
-                : 'User behavior that violates community standards.'}
-            </div>
-            {selectedReport.context && (
-              <div className="rc-note">"{selectedReport.context}"</div>
-            )}
-          </div>
-
-          {selectedReport.status !== 'resolved' && (
-            <div className="action-note-field" style={{ marginTop: '16px' }}>
-              <label style={{ fontSize: '13px', color: 'var(--text-3,#666)', marginBottom: '8px', display: 'block' }}>
-                Moderator Note (Optional)
-              </label>
-              <textarea
-                rows={3}
-                placeholder="Add a note explaining your moderation action…"
-                value={actionNote}
-                onChange={e => onActionNoteChange(e.target.value)}
-                style={{ width: '100%', padding: '10px 14px', background: 'var(--bg-card,#151d2f)', border: '1px solid var(--border,rgba(255,255,255,0.08))', borderRadius: '8px', color: '#fff', fontSize: '13px', resize: 'vertical' }}
-              />
-            </div>
-          )}
+          <span className={`mp-dp-status-badge ${statusClass}`} id="dpAction">
+            {selectedReport.status?.charAt(0).toUpperCase() + selectedReport.status?.slice(1)}
+          </span>
         </div>
-      </div>
-
-      {selectedReport.status === 'resolved' && (
-        <div style={{ padding: '20px', textAlign: 'center', color: '#34d399' }}>
-          ✅ This report has been resolved.
+        <div className="mp-dp-meta">
+          <span className="mp-dp-meta-item">
+            📍 <strong>{selectedReport.channel || '#general'}</strong>
+          </span>
+          <span className="mp-dp-meta-item">
+            🏷️ <strong>{selectedReport.type === 'message' ? 'Message Report' : 'User Report'}</strong>
+          </span>
           {selectedReport.action && (
-            <div style={{ fontSize: '13px', color: 'var(--text-3,#666)', marginTop: '8px' }}>
-              Action taken: {selectedReport.action}
+            <span className="mp-dp-meta-item">
+              ⚡ <strong>Last action: {selectedReport.action}</strong>
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Body */}
+      <div className="mp-dp-body" id="tabContent">
+        {/* Reporter Info */}
+        <div className="mp-reporter-card">
+          <div className="mp-reporter-av">AM</div>
+          <div className="mp-reporter-info">
+            <div className="mp-reporter-name">Reported by: Anonymous</div>
+            <div className="mp-reporter-sub">
+              {selectedReport.date} · via {selectedReport.type === 'message' ? 'Message' : 'Profile'} Report
+            </div>
+          </div>
+          <span className="mp-anon-badge">🔒 Anonymous</span>
+        </div>
+
+        {/* Reason Card */}
+        <div className="mp-reason-card">
+          <div className="mp-rc-header">
+            <span className="mp-rc-icon">{TYPE_ICONS[selectedReport.type] || '⚠️'}</span>
+            <span className="mp-rc-title">{selectedReport.reason}</span>
+          </div>
+          <div className="mp-rc-desc">
+            {selectedReport.type === 'message'
+              ? 'This message was flagged as violating community guidelines.'
+              : 'This user\'s behavior was flagged as violating community standards.'}
+          </div>
+          {selectedReport.context && (
+            <div className="mp-rc-context">
+              "{selectedReport.context}"
             </div>
           )}
+        </div>
+
+        {/* Moderator Note */}
+        {selectedReport.status !== 'resolved' && (
+          <div className="mp-note-section">
+            <span className="mp-note-label">Moderator Note (Optional)</span>
+            <textarea
+              className="mp-note-textarea"
+              rows={3}
+              placeholder="Add a note explaining your moderation action…"
+              value={actionNote}
+              onChange={e => onActionNoteChange(e.target.value)}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Resolved Banner */}
+      {selectedReport.status === 'resolved' && (
+        <div className="mp-resolved-banner">
+          <span className="mp-resolved-icon">✅</span>
+          <div className="mp-resolved-info">
+            <h4>Report Resolved</h4>
+            <p>{selectedReport.action ? `Action taken: ${selectedReport.action}` : 'This report has been closed.'}</p>
+          </div>
         </div>
       )}
     </div>

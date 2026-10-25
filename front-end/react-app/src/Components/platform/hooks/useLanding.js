@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { authService } from '../../../services/authService';
+import { dashboardService } from '../../../services/dashboardService';
 
 export const HOW_IT_WORKS_STEPS = [
   {
@@ -35,8 +37,13 @@ export default function useLanding() {
   });
 
   useEffect(() => {
-    fetch('http://localhost:3000/api/dashboard/stats')
-      .then((res) => (res.ok ? res.json() : null))
+    const user = authService.getCurrentUser();
+    if (!user || user.id === undefined || user.id === null) {
+      return;
+    }
+
+    dashboardService
+      .getStats()
       .then((data) => {
         if (data) {
           const u = data.totalUsers || 0;

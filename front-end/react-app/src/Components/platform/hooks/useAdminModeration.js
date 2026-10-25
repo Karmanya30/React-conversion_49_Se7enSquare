@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiRequest } from '../../../services/api';
 import { appealService } from '../../../services/appealService';
 
@@ -13,6 +13,13 @@ export default function useAdminModeration(showToast, onUserUpdated) {
   const [appeals, setAppeals] = useState([]);
   const [organizerApps, setOrganizerApps] = useState([]);
   const [moderatorApps, setModeratorApps] = useState([]);
+
+  const showToastRef = useRef(showToast);
+  const onUserUpdatedRef = useRef(onUserUpdated);
+  useEffect(() => {
+    showToastRef.current = showToast;
+    onUserUpdatedRef.current = onUserUpdated;
+  });
 
   const refreshReports = useCallback(async () => {
     try {
@@ -72,6 +79,7 @@ export default function useAdminModeration(showToast, onUserUpdated) {
     } catch { /* keep current */ }
   }, []);
 
+  // Initial load once on mount
   useEffect(() => {
     refreshReports();
     refreshAppeals();
@@ -79,20 +87,20 @@ export default function useAdminModeration(showToast, onUserUpdated) {
     refreshApps();
   }, [refreshReports, refreshAppeals, refreshEvents, refreshApps]);
 
-  const handleModerationAction = async (item, actionType, note) => {
+  const handleModerationAction = useCallback(async (item, actionType, note) => {
     const resolutionNote = (note || '').trim();
 
     try {
       if (actionType === 'dismiss') {
         if (!resolutionNote) {
-          showToast('⚠️ Resolution note is required to dismiss a report');
+          showToastRef.current?.('⚠️ Resolution note is required to dismiss a report');
           return;
         }
         await apiRequest(`/reports/${item.id}/status`, {
           method: 'PATCH',
           body: JSON.stringify({ status: 'resolved', resolutionNote }),
         });
-        showToast('✓ Report dismissed');
+        showToastRef.current?.('✓ Report dismissed');
       } else if (actionType === 'warn') {
         const reason = resolutionNote || 'Official warning following escalated report';
         await apiRequest('/sanctions', {
@@ -109,7 +117,7 @@ export default function useAdminModeration(showToast, onUserUpdated) {
           method: 'PATCH',
           body: JSON.stringify({ status: 'resolved', resolutionNote: reason }),
         });
-        showToast('⚠️ Warning issued and report resolved');
+        showToastRef.current?.('⚠️ Warning issued and report resolved');
       } else if (actionType === 'remove_content') {
         const reason = resolutionNote || 'Content removed following escalated report';
         await apiRequest('/sanctions', {
@@ -126,7 +134,7 @@ export default function useAdminModeration(showToast, onUserUpdated) {
           method: 'PATCH',
           body: JSON.stringify({ status: 'resolved', resolutionNote: reason }),
         });
-        showToast('🗑️ Content marked removed and author sanctioned');
+        showToastRef.current?.('🗑️ Content marked removed and author sanctioned');
       } else if (actionType === 'suspend_author') {
         const reason = resolutionNote || 'Author suspended following escalated report';
         await apiRequest(`/users/${item.targetId}/suspend`, {
@@ -137,8 +145,8 @@ export default function useAdminModeration(showToast, onUserUpdated) {
           method: 'PATCH',
           body: JSON.stringify({ status: 'resolved', resolutionNote: reason }),
         });
-        showToast('⚠️ Author suspended and report resolved');
-        if (onUserUpdated) onUserUpdated();
+        showToastRef.current?.('⚠️ Author suspended and report resolved');
+        if (onUserUpdatedRef.current) onUserUpdatedRef.current();
       } else if (actionType === 'ban_author') {
         const reason = resolutionNote || 'Author permanently banned following escalated report';
         await apiRequest(`/users/${item.targetId}/ban`, {
@@ -149,27 +157,27 @@ export default function useAdminModeration(showToast, onUserUpdated) {
           method: 'PATCH',
           body: JSON.stringify({ status: 'resolved', resolutionNote: reason }),
         });
-        showToast('⛔ Author permanently banned');
-        if (onUserUpdated) onUserUpdated();
+        showToastRef.current?.('⛔ Author permanently banned');
+        if (onUserUpdatedRef.current) onUserUpdatedRef.current();
       }
 
       await refreshReports();
     } catch (err) {
-      showToast(`❌ ${err.message}`);
+      showToastRef.current?.(`❌ ${err.message}`);
     }
-  };
+  }, [refreshReports]);
 
-  const handleAppeal = async (appealId, status) => {
+  const handleAppeal = useCallback(async (appealId, status) => {
     try {
       await appealService.reviewAppeal(appealId, status);
-      showToast(`✓ Appeal ${status}`);
+      showToastRef.current?.(`✓ Appeal ${status}`);
       await refreshAppeals();
     } catch (err) {
-      showToast(`❌ ${err.message}`);
+      showToastRef.current?.(`❌ ${err.message}`);
     }
-  };
+  }, [refreshAppeals]);
 
-  const handleOrganizerApp = async (id, newStatus) => {
+  const handleOrganizerApp = useCallback(async (id, newStatus) => {
     const status = newStatus === 'approved' ? 'verified' : 'rejected';
     const rejectionReason = status === 'rejected' ? window.prompt('Reason for rejecting this application (5–500 characters):') : undefined;
     if (status === 'rejected' && !rejectionReason) return;
@@ -178,14 +186,14 @@ export default function useAdminModeration(showToast, onUserUpdated) {
         method: 'PATCH',
         body: JSON.stringify({ status, rejectionReason }),
       });
-      showToast(`Application ${status}`);
+      showToastRef.current?.(`Application ${status}`);
       await refreshApps();
     } catch (err) {
-      showToast(`❌ ${err.message}`);
+      showToastRef.current?.(`❌ ${err.message}`);
     }
-  };
+  }, [refreshApps]);
 
-  const handleModeratorApp = async (id, newStatus) => {
+  const handleModeratorApp = useCallback(async (id, newStatus) => {
     const status = newStatus === 'approved' ? 'certified' : 'rejected';
     const rejectionReason = status === 'rejected' ? window.prompt('Reason for rejecting this application (5–500 characters):') : undefined;
     if (status === 'rejected' && !rejectionReason) return;
@@ -194,12 +202,12 @@ export default function useAdminModeration(showToast, onUserUpdated) {
         method: 'PATCH',
         body: JSON.stringify({ status, rejectionReason }),
       });
-      showToast(`Application ${status}`);
+      showToastRef.current?.(`Application ${status}`);
       await refreshApps();
     } catch (err) {
-      showToast(`❌ ${err.message}`);
+      showToastRef.current?.(`❌ ${err.message}`);
     }
-  };
+  }, [refreshApps]);
 
   return {
     reports,

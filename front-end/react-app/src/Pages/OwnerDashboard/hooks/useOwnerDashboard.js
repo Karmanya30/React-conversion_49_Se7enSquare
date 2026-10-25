@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { DEFAULT_STATS, DEFAULT_REVENUE } from '../../../Components/platform/data/ownerDashboardData';
 import { dashboardService } from '../../../services/dashboardService';
 import { authService } from '../../../services/authService';
-import { API_BASE } from '../../../services/api';
+import { apiRequest } from '../../../services/api';
 
 function getCurrentUser() {
   const u = authService.getCurrentUser();
@@ -15,16 +15,6 @@ function getCurrentUser() {
   };
 }
 
-// Extracts the human-readable error message a NestJS response carries.
-async function apiErrorMessage(res) {
-  try {
-    const body = await res.json();
-    const msg = body?.message;
-    return Array.isArray(msg) ? msg.join(', ') : msg || `HTTP ${res.status}`;
-  } catch {
-    return `HTTP ${res.status}`;
-  }
-}
 
 /**
  * Manages OwnerDashboard stats, revenue, and drill-down modal state.
@@ -93,62 +83,56 @@ export default function useOwnerDashboard() {
         let users = [];
         let loadError = '';
         try {
-          const [commRes, usersRes] = await Promise.all([
-            fetch(`${API_BASE}/communities`, { headers: { 'x-role': role } }),
-            fetch(`${API_BASE}/users`, { headers: { 'x-role': role } }),
+          const [comms, usrs] = await Promise.all([
+            apiRequest('/communities'),
+            apiRequest('/users'),
           ]);
-          if (commRes.ok) communities = await commRes.json();
-          else loadError = await apiErrorMessage(commRes);
-          users = usersRes.ok ? await usersRes.json() : [];
-        } catch {
+          communities = Array.isArray(comms) ? comms : [];
+          users = Array.isArray(usrs) ? usrs : [];
+        } catch (err) {
           communities = [];
           users = [];
-          loadError = 'Failed to fetch communities from server.';
+          loadError = err.message || 'Failed to fetch communities from server.';
         }
-        setDrillContent({ kind: 'communities', communities: Array.isArray(communities) ? communities : [], users, loadError });
+        setDrillContent({ kind: 'communities', communities, users, loadError });
       } else if (kind === 'events') {
         setDrillTitle('Events Overview');
         let events = [];
         let communities = [];
         let loadError = '';
         try {
-          const [eventsRes, commsRes] = await Promise.all([
-            fetch(`${API_BASE}/events`, { headers: { 'x-role': role } }),
-            fetch(`${API_BASE}/communities`, { headers: { 'x-role': role } }),
+          const [evts, comms] = await Promise.all([
+            apiRequest('/events'),
+            apiRequest('/communities'),
           ]);
-          if (eventsRes.ok) events = await eventsRes.json();
-          else loadError = await apiErrorMessage(eventsRes);
-          communities = commsRes.ok ? await commsRes.json() : [];
-        } catch {
+          events = Array.isArray(evts) ? evts : [];
+          communities = Array.isArray(comms) ? comms : [];
+        } catch (err) {
           events = [];
           communities = [];
-          loadError = 'Failed to fetch events from server.';
+          loadError = err.message || 'Failed to fetch events from server.';
         }
-        setDrillContent({ kind: 'events', events: Array.isArray(events) ? events : [], communities, loadError });
+        setDrillContent({ kind: 'events', events, communities, loadError });
       } else if (kind === 'revenue') {
         setDrillTitle('Revenue — All Transactions');
         let payments = [];
         let loadError = '';
         try {
-          const res = await fetch(`${API_BASE}/payments/history`, { headers: { 'x-role': role } });
-          if (res.ok) payments = await res.json();
-          else loadError = await apiErrorMessage(res);
-        } catch {
+          const res = await apiRequest('/payments/history');
+          payments = Array.isArray(res) ? res : [];
+        } catch (err) {
           payments = [];
-          loadError = 'Failed to fetch payment history from server.';
+          loadError = err.message || 'Failed to fetch payment history from server.';
         }
-        payments = Array.isArray(payments) ? payments : [];
         setDrillContent({ kind: 'revenue', payments, loadError });
       } else if (kind === 'subscriptions') {
         setDrillTitle('Subscriptions Status');
         let subData = { byPlan: { free: 0, plus: 0, ultra_pro: 0 }, subscribers: [] };
         let loadError = '';
         try {
-          const res = await fetch(`${API_BASE}/subscriptions`, { headers: { 'x-role': role } });
-          if (res.ok) subData = await res.json();
-          else loadError = await apiErrorMessage(res);
-        } catch {
-          loadError = 'Could not reach the backend.';
+          subData = await apiRequest('/subscriptions');
+        } catch (err) {
+          loadError = err.message || 'Could not reach the backend.';
         }
         setDrillContent({ kind: 'subscriptions', subData, loadError });
       } else if (kind === 'organisers') {
@@ -157,14 +141,12 @@ export default function useOwnerDashboard() {
         let orgs = [];
         let loadError = '';
         try {
-          const res = await fetch(`${API_BASE}/organisers?status=${filter}`, { headers: { 'x-role': role } });
-          if (res.ok) orgs = await res.json();
-          else loadError = await apiErrorMessage(res);
-        } catch {
+          const res = await apiRequest(`/organisers?status=${filter}`);
+          orgs = Array.isArray(res) ? res : [];
+        } catch (err) {
           orgs = [];
-          loadError = 'Failed to fetch organizers from server.';
+          loadError = err.message || 'Failed to fetch organizers from server.';
         }
-        orgs = Array.isArray(orgs) ? orgs : [];
         setDrillContent({ kind: 'organisers', orgs, filter, loadError });
       }
     } catch (err) {

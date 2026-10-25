@@ -82,6 +82,6 @@ export const authService = {
    */
   isAuthenticated() {
     const user = getStoredUser();
-    return Boolean(user && user.username);
+    return Boolean(user && user.username && user.id !== undefined && user.id !== null);
   },
 };

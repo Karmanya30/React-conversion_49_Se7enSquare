@@ -146,9 +146,9 @@ export default function Login() {
             <form className="auth-form" onSubmit={handleLoginSubmit} noValidate>
               {loginErrors.general && (
                 <div className="auth-alert error" style={{
-                  background: 'rgba(239, 68, 68, 0.15)',
-                  border: '1px solid rgba(239, 68, 68, 0.35)',
-                  color: '#fca5a5',
+                  background: 'rgba(248, 81, 73, 0.12)',
+                  border: '1px solid rgba(248, 81, 73, 0.35)',
+                  color: '#F85149',
                   borderRadius: '8px',
                   padding: '12px 14px',
                   fontSize: '13px',
@@ -165,7 +165,7 @@ export default function Login() {
                     <Link
                       to="/appeal"
                       style={{
-                        color: '#93c5fd',
+                        color: '#58A6FF',
                         textDecoration: 'underline',
                         fontSize: '12px',
                         marginLeft: '24px',
@@ -348,9 +348,9 @@ export default function Login() {
             <form className="auth-form" onSubmit={handleRegisterSubmit} noValidate>
               {regErrors.general && (
                 <div className="auth-alert error" style={{
-                  background: 'rgba(239, 68, 68, 0.15)',
-                  border: '1px solid rgba(239, 68, 68, 0.35)',
-                  color: '#fca5a5',
+                  background: 'rgba(248, 81, 73, 0.12)',
+                  border: '1px solid rgba(248, 81, 73, 0.35)',
+                  color: '#F85149',
                   borderRadius: '8px',
                   padding: '10px 14px',
                   fontSize: '13px',

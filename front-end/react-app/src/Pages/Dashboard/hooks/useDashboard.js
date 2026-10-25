@@ -18,10 +18,10 @@ export default function useDashboard() {
   const [user, setUser] = useState(() => {
     const u = authService.getCurrentUser();
     return {
-      id: u?.id || 4,
+      id: u?.id,
       firstName: u?.firstName || u?.username || 'User',
       lastName: u?.lastName || '',
-      username: u?.username || 'player01',
+      username: u?.username || '',
       role: u?.role || 'user',
     };
   });
@@ -42,22 +42,25 @@ export default function useDashboard() {
     setError(null);
     try {
       const currentUser = authService.getCurrentUser();
-      if (currentUser) {
-        setUser((prev) => {
-          if (prev.id === currentUser.id && prev.username === currentUser.username && prev.role === currentUser.role) {
-            return prev;
-          }
-          return {
-            id: currentUser.id || 4,
-            firstName: currentUser.firstName || currentUser.username || 'User',
-            lastName: currentUser.lastName || '',
-            username: currentUser.username || 'player01',
-            role: currentUser.role || 'user',
-          };
-        });
+      if (!currentUser || currentUser.id === undefined || currentUser.id === null) {
+        navigate('/login');
+        return;
       }
 
-      const currentId = currentUser?.id || 4;
+      setUser((prev) => {
+        if (prev.id === currentUser.id && prev.username === currentUser.username && prev.role === currentUser.role) {
+          return prev;
+        }
+        return {
+          id: currentUser.id,
+          firstName: currentUser.firstName || currentUser.username || 'User',
+          lastName: currentUser.lastName || '',
+          username: currentUser.username || 'user',
+          role: currentUser.role || 'user',
+        };
+      });
+
+      const currentId = currentUser.id;
       const [joinedRes, createdRes, eventsRes, notifsRes, statsRes] = await Promise.allSettled([
         dashboardService.getJoinedCommunities(currentId),
         dashboardService.getCreatedCommunities(currentId),

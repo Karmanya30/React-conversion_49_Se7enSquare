@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { apiRequest, getStoredUser } from '../../../services/api';
 
 /**
@@ -13,6 +13,10 @@ export default function useAdminUsers(showToast) {
   const [editingUser, setEditingUser] = useState(null);
 
   const adminUser = getStoredUser();
+  const showToastRef = useRef(showToast);
+  useEffect(() => {
+    showToastRef.current = showToast;
+  }, [showToast]);
 
   const filteredUsers = useMemo(() => {
     return users.filter((u) => {
@@ -33,9 +37,14 @@ export default function useAdminUsers(showToast) {
     } catch { /* leave current list */ }
   }, []);
 
-  const updateUserRole = async (userId, newRole) => {
+  // Initial load once on mount
+  useEffect(() => {
+    refreshUsers();
+  }, [refreshUsers]);
+
+  const updateUserRole = useCallback(async (userId, newRole) => {
     if (userId === adminUser?.id) {
-      showToast('⚠️ Cannot change your own role');
+      showToastRef.current?.('⚠️ Cannot change your own role');
       return;
     }
     try {
@@ -43,58 +52,70 @@ export default function useAdminUsers(showToast) {
         method: 'PATCH',
         body: JSON.stringify({ role: newRole }),
       });
-      showToast('✓ Role updated');
-      await refreshUsers();
       setEditingUser(null);
+      showToastRef.current?.(`✓ Role updated to ${newRole}`);
+      await refreshUsers();
     } catch (err) {
-      showToast(`❌ ${err.message}`);
+      showToastRef.current?.(`❌ ${err.message}`);
     }
-  };
+  }, [adminUser?.id, refreshUsers]);
 
-  const suspendUser = async (userId, reason) => {
-    const user = users.find((u) => u.id === userId);
-    const r = reason || window.prompt(`Reason for suspending @${user?.username || userId}:`);
+  const suspendUser = useCallback(async (userId, reason) => {
+    if (userId === adminUser?.id) {
+      showToastRef.current?.('❌ Cannot suspend your own account');
+      return;
+    }
+    const targetUser = users.find((u) => u.id === userId);
+    const defaultReason = reason || 'Violation of community guidelines';
+    const r = window.prompt(`Suspend ${targetUser?.username || `user #${userId}`}?\nEnter reason:`, defaultReason);
     if (!r?.trim()) return;
     try {
       await apiRequest(`/users/${userId}/suspend`, {
         method: 'POST',
         body: JSON.stringify({ reason: r.trim() }),
       });
-      showToast(`⚠️ @${user?.username || userId} suspended`);
+      showToastRef.current?.('⚠️ User suspended');
       await refreshUsers();
     } catch (err) {
-      showToast(`❌ ${err.message}`);
+      showToastRef.current?.(`❌ ${err.message}`);
     }
-  };
+  }, [adminUser?.id, users, refreshUsers]);
 
-  const banUser = async (userId, reason) => {
-    const user = users.find((u) => u.id === userId);
-    const r = reason || window.prompt(`Reason for permanently banning @${user?.username || userId}:`);
+  const banUser = useCallback(async (userId, reason) => {
+    if (userId === adminUser?.id) {
+      showToastRef.current?.('❌ Cannot ban your own account');
+      return;
+    }
+    const targetUser = users.find((u) => u.id === userId);
+    const defaultReason = reason || 'Repeated policy violations';
+    const r = window.prompt(`Permanently ban @${targetUser?.username || `user #${userId}`}?\nEnter reason:`, defaultReason);
     if (!r?.trim()) return;
     try {
       await apiRequest(`/users/${userId}/ban`, {
         method: 'POST',
         body: JSON.stringify({ reason: r.trim() }),
       });
-      showToast(`⛔ @${user?.username || userId} banned`);
+      showToastRef.current?.(`⛔ User banned`);
       await refreshUsers();
     } catch (err) {
-      showToast(`❌ ${err.message}`);
+      showToastRef.current?.(`❌ ${err.message}`);
     }
-  };
+  }, [adminUser?.id, users, refreshUsers]);
 
-  const reinstateUser = async (userId) => {
-    const user = users.find((u) => u.id === userId);
+  const reinstateUser = useCallback(async (userId) => {
+    const targetUser = users.find((u) => u.id === userId);
+    if (!window.confirm(`Reinstate ${targetUser?.username || `user #${userId}`}? Their account will be unlocked.`)) return;
     try {
       await apiRequest(`/users/${userId}/reinstate`, {
         method: 'POST',
+        body: JSON.stringify({ reason: 'Reinstated by admin' }),
       });
-      showToast(`✓ @${user?.username || userId} reinstated`);
+      showToastRef.current?.('✓ User reinstated');
       await refreshUsers();
     } catch (err) {
-      showToast(`❌ ${err.message}`);
+      showToastRef.current?.(`❌ ${err.message}`);
     }
-  };
+  }, [users, refreshUsers]);
 
   return {
     users,

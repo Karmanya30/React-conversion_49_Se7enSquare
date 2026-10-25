@@ -10,12 +10,19 @@ export const API_BASE = import.meta.env.VITE_API_URL || '/api';
  */
 export function getStoredUser() {
   try {
-    const raw = localStorage.getItem('nexus_user') || localStorage.getItem('currentUser');
+    const raw =
+      localStorage.getItem('nexus_user') ||
+      localStorage.getItem('currentUser') ||
+      localStorage.getItem('user');
     if (!raw) return null;
     const user = JSON.parse(raw);
+    if (!user || typeof user !== 'object') return null;
     if (user) {
       delete user.password;
       delete user.passwordHash;
+    }
+    if (user.id !== undefined && user.id !== null && !isNaN(Number(user.id))) {
+      user.id = Number(user.id);
     }
     return user;
   } catch {
@@ -42,8 +49,11 @@ export function storeUserSession(user) {
     return;
   }
 
+  const rawId = user.id ?? user.userId ?? user._id;
+  const parsedId = rawId !== undefined && rawId !== null && !isNaN(Number(rawId)) ? Number(rawId) : rawId;
+
   const safeSession = {
-    id: user.id,
+    id: parsedId,
     username: user.username,
     role: user.role || 'user',
     name: user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username,
@@ -74,7 +84,7 @@ export async function apiRequest(endpoint, options = {}) {
   const headers = {
     ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
     'x-role': role,
-    ...(user?.id ? { 'x-user-id': String(user.id) } : {}),
+    ...(user?.id !== undefined && user?.id !== null ? { 'x-user-id': String(user.id) } : {}),
     ...(options.headers || {}),
   };
 

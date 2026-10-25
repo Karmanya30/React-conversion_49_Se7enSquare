@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { DEFAULT_CONFIG, DEFAULT_POLICIES } from '../data/adminData';
-
-const API_BASE = 'http://localhost:3000/api';
+import { apiRequest } from '../../../services/api';
 
 /**
  * Custom hook managing platform configuration, toggles, limits, and keyword policies with backend sync.
@@ -14,14 +13,9 @@ export default function useAdminConfig(showToast, addAuditLog) {
   useEffect(() => {
     async function loadConfig() {
       try {
-        const res = await fetch(`${API_BASE}/platform-config`, {
-          headers: { 'x-role': 'admin' },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data && typeof data === 'object') {
-            setConfig((prev) => ({ ...prev, ...data }));
-          }
+        const data = await apiRequest('/platform-config');
+        if (data && typeof data === 'object') {
+          setConfig((prev) => ({ ...prev, ...data }));
         }
       } catch {}
     }
@@ -34,12 +28,8 @@ export default function useAdminConfig(showToast, addAuditLog) {
     if (toastMessage) showToast(toastMessage);
 
     try {
-      await fetch(`${API_BASE}/platform-config`, {
+      await apiRequest('/platform-config', {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-role': 'admin',
-        },
         body: JSON.stringify({ [field]: value }),
       });
     } catch {}

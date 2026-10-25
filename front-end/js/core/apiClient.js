@@ -6,22 +6,30 @@
 
 const API_BASE = 'http://localhost:3000/api';
 
-// ── Role resolution ──────────────────────────────────────────────────────────
-// Read role from localStorage session; fall back to 'user'.
-function getRole() {
+// ── Role and Identity resolution ─────────────────────────────────────────────
+function getAuthContext() {
     try {
-        const user = JSON.parse(localStorage.getItem('nexus_user') || '{}');
-        return typeof normalizeRole === 'function' ? normalizeRole(user.role) : (user.role || 'user');
+        const raw = localStorage.getItem('nexus_user') || localStorage.getItem('currentUser');
+        if (!raw) return { role: 'user', id: null };
+        const user = JSON.parse(raw);
+        const role = typeof normalizeRole === 'function' ? normalizeRole(user.role) : (user.role || 'user');
+        const rawId = user.id ?? user.userId ?? user._id;
+        const id = rawId !== undefined && rawId !== null && !isNaN(Number(rawId)) ? Number(rawId) : null;
+        return { role, id, user };
     } catch {
-        return 'user';
+        return { role: 'user', id: null };
     }
+}
+
+function getRole() {
+    return getAuthContext().role;
 }
 
 // ── Multipart upload wrapper ─────────────────────────────────────────────────
 // Separate from apiFetch since it must NOT set a JSON Content-Type header
 // (the browser needs to set the multipart/form-data boundary itself).
 async function apiUpload(file) {
-    const role = getRole();
+    const auth = getAuthContext();
     const url = `${API_BASE}/uploads`;
     const formData = new FormData();
     formData.append('file', file);
@@ -30,7 +38,10 @@ async function apiUpload(file) {
     try {
         res = await fetch(url, {
             method: 'POST',
-            headers: { 'x-role': role },
+            headers: {
+                'x-role': auth.role,
+                ...(auth.id !== null ? { 'x-user-id': String(auth.id) } : {})
+            },
             body: formData
         });
     } catch (err) {
@@ -51,11 +62,12 @@ async function apiUpload(file) {
 
 // ── Core fetch wrapper ───────────────────────────────────────────────────────
 async function apiFetch(path, options = {}) {
-    const role = getRole();
+    const auth = getAuthContext();
     const url = `${API_BASE}${path}`;
     const headers = {
         'Content-Type': 'application/json',
-        'x-role': role,
+        'x-role': auth.role,
+        ...(auth.id !== null ? { 'x-user-id': String(auth.id) } : {}),
         ...(options.headers || {})
     };
 

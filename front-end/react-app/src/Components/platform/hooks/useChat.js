@@ -2,29 +2,23 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { DEFAULT_CHANNELS, EMOJIS } from '../data/chatData';
 
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
+import { apiRequest, getStoredUser } from '../../../services/api';
 
 function getUser() {
-  try {
-    const raw = JSON.parse(
-      localStorage.getItem('user') ||
-      localStorage.getItem('nexus_user') ||
-      localStorage.getItem('currentUser') ||
-      '{}'
-    );
-    const name = raw.fullName || raw.name || (raw.firstName ? `${raw.firstName} ${raw.lastName || ''}`.trim() : raw.username || 'User');
-    return {
-      id: raw.id || 1,
-      name,
-      fullName: name,
-      firstName: raw.firstName || raw.username || 'User',
-      username: raw.username || 'user',
-      initials: (raw.firstName ? raw.firstName.slice(0, 1) + (raw.lastName ? raw.lastName.slice(0, 1) : '') : (name || 'U')).slice(0, 2).toUpperCase(),
-      role: raw.role || 'user',
-    };
-  } catch {
-    return { id: 1, name: 'User', fullName: 'User', firstName: 'User', username: 'user', initials: 'U', role: 'user' };
+  const raw = getStoredUser();
+  if (!raw) {
+    return { id: null, name: 'User', fullName: 'User', firstName: 'User', username: 'user', initials: 'U', role: 'user' };
   }
+  const name = raw.fullName || raw.name || (raw.firstName ? `${raw.firstName} ${raw.lastName || ''}`.trim() : raw.username || 'User');
+  return {
+    id: raw.id,
+    name,
+    fullName: name,
+    firstName: raw.firstName || raw.username || 'User',
+    username: raw.username || 'user',
+    initials: (raw.firstName ? raw.firstName.slice(0, 1) + (raw.lastName ? raw.lastName.slice(0, 1) : '') : (name || 'U')).slice(0, 2).toUpperCase(),
+    role: raw.role || 'user',
+  };
 }
 
 /**
@@ -69,23 +63,18 @@ export default function useChat() {
         return;
       }
       try {
-        const res = await fetch(`${API_BASE}/communities/${communityId}`, {
-          headers: { 'x-role': user.role },
-        });
-        if (res.ok) {
-          const comm = await res.json();
-          if (Array.isArray(comm.channels) && comm.channels.length > 0) {
-            const parsed = comm.channels.map((c, idx) => ({
-              id:    typeof c === 'string' ? c : c.id || c.name || String(idx + 1),
-              name:  typeof c === 'string' ? c : c.name,
-              topic: typeof c === 'object' && c.topic ? c.topic : `#${typeof c === 'string' ? c : c.name} channel`,
-            }));
-            setChannels(parsed);
-            const found = parsed.find(c => c.name === initialChannel || c.id === initialChannel) || parsed[0];
-            if (found) setActiveChannel(found);
-          } else {
-            setActiveChannel({ id: 'general', name: 'general', topic: 'General discussion' });
-          }
+        const comm = await apiRequest(`/communities/${communityId}`);
+        if (comm && Array.isArray(comm.channels) && comm.channels.length > 0) {
+          const parsed = comm.channels.map((c, idx) => ({
+            id:    typeof c === 'string' ? c : c.id || c.name || String(idx + 1),
+            name:  typeof c === 'string' ? c : c.name,
+            topic: typeof c === 'object' && c.topic ? c.topic : `#${typeof c === 'string' ? c : c.name} channel`,
+          }));
+          setChannels(parsed);
+          const found = parsed.find(c => c.name === initialChannel || c.id === initialChannel) || parsed[0];
+          if (found) setActiveChannel(found);
+        } else {
+          setActiveChannel({ id: 'general', name: 'general', topic: 'General discussion' });
         }
       } catch {}
       setLoading(false);
@@ -101,29 +90,25 @@ export default function useChat() {
         return;
       }
       try {
-        const [memRes, usersRes] = await Promise.all([
-          fetch(`${API_BASE}/memberships?communityId=${communityId}`, { headers: { 'x-role': user.role } }),
-          fetch(`${API_BASE}/users?communityId=${communityId}`, { headers: { 'x-role': user.role } }),
+        const [mems, usrs] = await Promise.all([
+          apiRequest(`/memberships?communityId=${communityId}`),
+          apiRequest(`/users?communityId=${communityId}`),
         ]);
-        if (memRes.ok && usersRes.ok) {
-          const mems = await memRes.json();
-          const usrs = await usersRes.json();
-          const userMap = new Map((Array.isArray(usrs) ? usrs : []).map(u => [String(u.id), u]));
-          const mappedMembers = (Array.isArray(mems) ? mems : []).map(m => {
-            const u = userMap.get(String(m.userId)) || {};
-            const mName = u.fullName || u.username || `User #${m.userId}`;
-            return {
-              name: mName,
-              userId: m.userId,
-              avatar: u.avatar,
-              role: u.role || 'Member',
-              status: u.status || 'active',
-              initials: mName.slice(0, 2).toUpperCase(),
-              color: '#6366f1',
-            };
-          });
-          setMembers(mappedMembers);
-        }
+        const userMap = new Map((Array.isArray(usrs) ? usrs : []).map(u => [String(u.id), u]));
+        const mappedMembers = (Array.isArray(mems) ? mems : []).map(m => {
+          const u = userMap.get(String(m.userId)) || {};
+          const mName = u.fullName || u.username || `User #${m.userId}`;
+          return {
+            name: mName,
+            userId: m.userId,
+            avatar: u.avatar,
+            role: u.role || 'Member',
+            status: u.status || 'active',
+            initials: mName.slice(0, 2).toUpperCase(),
+            color: '#6366f1',
+          };
+        });
+        setMembers(mappedMembers);
       } catch {
         setMembers([]);
       }
@@ -136,35 +121,28 @@ export default function useChat() {
     async function fetchMessages() {
       if (!activeChannel?.id) return;
       try {
-        const res = await fetch(`${API_BASE}/channels/${activeChannel.id}/messages`, {
-          headers: { 'x-role': user.role },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (Array.isArray(data)) {
-            setMessages(data.map(m => {
-              const reactionsArr = [];
-              if (m.reactions && typeof m.reactions === 'object') {
-                for (const [emoji, count] of Object.entries(m.reactions)) {
-                  reactionsArr.push({ emoji, count: Number(count) });
-                }
+        const data = await apiRequest(`/channels/${activeChannel.id}/messages`);
+        if (Array.isArray(data)) {
+          setMessages(data.map(m => {
+            const reactionsArr = [];
+            if (m.reactions && typeof m.reactions === 'object') {
+              for (const [emoji, count] of Object.entries(m.reactions)) {
+                reactionsArr.push({ emoji, count: Number(count) });
               }
-              const authorName = m.authorName || m.author?.name || m.author || 'User';
-              return {
-                id:        m.id,
-                author:    authorName,
-                initials:  authorName.slice(0, 2).toUpperCase(),
-                color:     '#6366f1',
-                text:      m.content || '',
-                time:      m.createdAt
-                  ? new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                  : '',
-                reactions: reactionsArr,
-              };
-            }));
-          } else {
-            setMessages([]);
-          }
+            }
+            const authorName = m.authorName || m.author?.name || m.author || 'User';
+            return {
+              id:        m.id,
+              author:    authorName,
+              initials:  authorName.slice(0, 2).toUpperCase(),
+              color:     '#6366f1',
+              text:      m.content || '',
+              time:      m.createdAt
+                ? new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                : '',
+              reactions: reactionsArr,
+            };
+          }));
         } else {
           setMessages([]);
         }
@@ -201,19 +179,17 @@ export default function useChat() {
     setReplyTo(null);
 
     try {
-      const res = await fetch(`${API_BASE}/messages`, {
+      const created = await apiRequest('/messages', {
         method:  'POST',
-        headers: { 'Content-Type': 'application/json', 'x-role': user.role },
         body:    JSON.stringify({
           channelId:  String(activeChannel.id),
           content:    fullContent,
           communityId: Number(communityId) || 1,
-          authorId:   user.id || 4,
+          authorId:   user?.id ? Number(user.id) : undefined,
           authorName,
         }),
       });
-      if (res.ok) {
-        const created = await res.json();
+      if (created && created.id) {
         setMessages(prev =>
           prev.map(m => m.id === tempMsg.id ? { ...m, id: created.id } : m)
         );
@@ -234,12 +210,11 @@ export default function useChat() {
     }));
 
     try {
-      await fetch(`${API_BASE}/messages/${msgId}/reactions`, {
+      await apiRequest(`/messages/${msgId}/reactions`, {
         method:  'POST',
-        headers: { 'Content-Type': 'application/json', 'x-role': user.role },
         body:    JSON.stringify({
           emoji,
-          actorId:   user.id || 4,
+          actorId:   user?.id ? Number(user.id) : undefined,
           actorName: user.username || user.firstName,
         }),
       });

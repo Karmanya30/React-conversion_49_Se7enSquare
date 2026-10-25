@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
+import { apiRequest } from '../../../services/api';
 
 /**
  * Manages fetching, filtering, and search state for the User Management page.
@@ -16,19 +16,7 @@ export default function useUserManagement() {
   const [roleFilter, setRoleFilter] = useState('all');
 
   useEffect(() => {
-    let role = 'admin';
-    try {
-      const u = JSON.parse(
-        localStorage.getItem('user') ||
-        localStorage.getItem('nexus_user') ||
-        localStorage.getItem('currentUser') ||
-        '{}'
-      );
-      if (u.role) role = u.role;
-    } catch {}
-
-    fetch(`${API_BASE}/users`, { headers: { 'x-role': role } })
-      .then(res => (res.ok ? res.json() : []))
+    apiRequest('/users')
       .then(data => {
         setUsers(Array.isArray(data) ? data : []);
         setLoading(false);

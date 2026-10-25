@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import AppShell from '../Components/platform/layout/AppShell';
 import Toast from '../Components/platform/common/Toast';
@@ -6,7 +6,7 @@ import useToast from '../Components/platform/hooks/useToast';
 import useAdminUsers from './AdminDashboard/hooks/useAdminUsers';
 import useAdminCommunities from './AdminDashboard/hooks/useAdminCommunities';
 import useAdminModeration from './AdminDashboard/hooks/useAdminModeration';
-import { PAGES, DEFAULT_STATS } from '../Components/platform/data/adminData';
+import { PAGES } from '../Components/platform/data/adminData';
 import AdminHeader from './AdminDashboard/components/AdminHeader';
 import AdminNav from './AdminDashboard/components/AdminNav';
 import OverviewTab from './AdminDashboard/components/OverviewTab';
@@ -25,13 +25,13 @@ function getAdminUser() {
   try {
     const raw = getStoredUser() || {};
     return {
-      id: raw.id || 1,
+      id: raw.id,
       role: raw.role || 'admin',
       firstName: raw.firstName || raw.name?.split(' ')[0] || 'Admin',
       username: raw.username || 'admin',
     };
   } catch {
-    return { id: 1, role: 'admin', firstName: 'Admin', username: 'admin' };
+    return { id: undefined, role: 'admin', firstName: 'Admin', username: 'admin' };
   }
 }
 
@@ -46,7 +46,7 @@ export default function AdminDashboard() {
   const tabParam = searchParams.get('tab');
   const [activePage, setActivePage] = useState(tabParam || 'overview');
   const [globalSearch, setGlobalSearch] = useState('');
-  const [stats, setStats] = useState(DEFAULT_STATS);
+  const [totalMessages, setTotalMessages] = useState(0);
 
   useEffect(() => {
     const currentTab = searchParams.get('tab');
@@ -55,12 +55,13 @@ export default function AdminDashboard() {
     }
   }, [searchParams, activePage]);
 
-  const handleSelectPage = (pageId) => {
+  const handleSelectPage = useCallback((pageId) => {
     setActivePage(pageId);
     setSearchParams({ tab: pageId });
-  };
+  }, [setSearchParams]);
 
   const { toast, showToast } = useToast();
+  const notify = useCallback((msg) => showToast('ℹ️', msg), [showToast]);
 
   const {
     users,
@@ -77,7 +78,7 @@ export default function AdminDashboard() {
     suspendUser,
     banUser,
     reinstateUser,
-  } = useAdminUsers((msg) => showToast('ℹ️', msg));
+  } = useAdminUsers(notify);
 
   const {
     communities,
@@ -85,7 +86,7 @@ export default function AdminDashboard() {
     refreshCommunities,
     suspendCommunity,
     reinstateCommunity,
-  } = useAdminCommunities((msg) => showToast('ℹ️', msg));
+  } = useAdminCommunities(notify);
 
   const {
     reports,
@@ -101,41 +102,33 @@ export default function AdminDashboard() {
     handleAppeal,
     handleOrganizerApp,
     handleModeratorApp,
-  } = useAdminModeration((msg) => showToast('ℹ️', msg), refreshUsers);
+  } = useAdminModeration(notify, refreshUsers);
 
-  // Initial load
+  // Load backend stats once on mount
   useEffect(() => {
-    refreshUsers();
-    refreshCommunities();
-    refreshReports();
-
+    let isMounted = true;
     async function loadStats() {
       try {
         const s = await apiRequest('/dashboard/stats');
-        if (s) {
-          setStats((prev) => ({
-            ...prev,
-            messages: s.totalMessages || 0,
-          }));
+        if (isMounted && s?.totalMessages !== undefined) {
+          setTotalMessages(s.totalMessages);
         }
       } catch { /* keep defaults */ }
     }
     loadStats();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => { isMounted = false; };
   }, []);
 
-  // Recalculate platform stats strictly from live data
-  useEffect(() => {
-    setStats((prev) => ({
-      users: users.length,
-      comms: communities.length,
-      escalatedReports: reports.filter((r) => r.status === 'escalated').length,
-      events: events.filter((e) => e.status === 'approved').length,
-      appeals: appeals.filter((a) => a.status === 'pending').length,
-      applications: (organizerApps?.filter((a) => a.status === 'pending').length || 0) + (moderatorApps?.filter((a) => a.status === 'pending').length || 0) || (organizerApps?.length || 0) + (moderatorApps?.length || 0),
-      messages: prev.messages || 0,
-    }));
-  }, [users, communities, reports, events, appeals, organizerApps, moderatorApps]);
+  // Compute live stats strictly from active sub-hook collections without circular render loops
+  const stats = useMemo(() => ({
+    users: users.length,
+    comms: communities.length,
+    escalatedReports: reports.filter((r) => r.status === 'escalated').length,
+    events: events.filter((e) => e.status === 'approved').length,
+    appeals: appeals.filter((a) => a.status === 'pending').length,
+    applications: (organizerApps?.filter((a) => a.status === 'pending').length || 0) + (moderatorApps?.filter((a) => a.status === 'pending').length || 0) || (organizerApps?.length || 0) + (moderatorApps?.length || 0),
+    messages: totalMessages,
+  }), [users, communities, reports, events, appeals, organizerApps, moderatorApps, totalMessages]);
 
   const currentPage = PAGES.find((p) => p.id === activePage) || PAGES[0];
 

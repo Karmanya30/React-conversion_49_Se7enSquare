@@ -47,8 +47,6 @@ export default function useReportForm() {
   const ctxUserName = searchParams.get('uname') ? decodeURIComponent(searchParams.get('uname')) : null;
   const ctxMsg = searchParams.get('msg');
   const ctxMsgText = searchParams.get('text') ? decodeURIComponent(searchParams.get('text')) : null;
-  const ctxComm = searchParams.get('community');
-  const ctxCommName = searchParams.get('cname') ? decodeURIComponent(searchParams.get('cname')) : null;
 
   const [step, setStep] = useState(1);
   const [selectedReason, setSelectedReason] = useState('');
@@ -56,13 +54,15 @@ export default function useReportForm() {
   const [confirmed, setConfirmed] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [refId, setRefId] = useState('');
-  const [userSearch, setUserSearch] = useState('');
+
+  // Target selection state
   const [selectedTarget, setSelectedTarget] = useState(() => {
     if (ctxUser) return { type: 'user', id: ctxUser, name: ctxUserName || `User #${ctxUser}` };
     if (ctxMsg) return { type: 'message', id: ctxMsg, text: ctxMsgText, author: ctxUserName || null };
-    if (ctxComm) return { type: 'community', id: ctxComm, name: ctxCommName };
     return null;
   });
+
+  const [userSearch, setUserSearch] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [toast, setToast] = useState({ show: false, msg: '' });
   const [submitting, setSubmitting] = useState(false);
@@ -84,7 +84,7 @@ export default function useReportForm() {
       });
       if (res.ok) {
         const data = await res.json();
-        setSearchResults(Array.isArray(data) ? data.slice(0, 5) : []);
+        setSearchResults(Array.isArray(data) ? data.slice(0, 6) : []);
         return;
       }
     } catch {}
@@ -97,10 +97,7 @@ export default function useReportForm() {
     const reasonText = (selectedReason + (additionalContext ? `: ${additionalContext}` : '')).slice(0, 195);
     const reportData = {
       reporterId: Number(user.id || 4),
-      targetType:
-        selectedTarget?.type === 'post' || selectedTarget?.type === 'community'
-          ? selectedTarget.type
-          : 'user',
+      targetType: 'user',
       targetId: Number(selectedTarget?.id || 1),
       reason: reasonText.length >= 8 ? reasonText : `${reasonText} - reported by user`,
     };
@@ -138,7 +135,7 @@ export default function useReportForm() {
 
   const goStep = (s) => {
     if (s === 2 && !selectedTarget) {
-      showToast('⚠️ Please select a target first.');
+      showToast('⚠️ Please select a user to report first.');
       return;
     }
     if (s === 3 && !selectedReason) {

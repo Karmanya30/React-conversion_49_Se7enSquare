@@ -2,22 +2,52 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
 /**
- * Report Header matching commit 0cc099a.
+ * Report Header with clean breadcrumbs.
  */
-export default function ReportHeader({ userInitials }) {
+export default function ReportHeader({ userInitials, target }) {
   const navigate = useNavigate();
+
+  const renderBreadcrumb = () => {
+    if (target?.type === 'message') {
+      return (
+        <div className="breadcrumb">
+          <span style={{ cursor: 'pointer' }} onClick={() => navigate('/chat')}>Chat</span>
+          <span className="sep">&gt;</span>
+          <span>{target.author ? `@${target.author}` : 'Message'}</span>
+          <span className="sep">&gt;</span>
+          <span className="current">🚩 Report Message</span>
+        </div>
+      );
+    }
+
+    if (target?.type === 'user') {
+      return (
+        <div className="breadcrumb">
+          <span>Users</span>
+          <span className="sep">&gt;</span>
+          <span>{target.name ? target.name : `User #${target.id}`}</span>
+          <span className="sep">&gt;</span>
+          <span className="current">🚩 Report User</span>
+        </div>
+      );
+    }
+
+    return (
+      <div className="breadcrumb">
+        <span style={{ cursor: 'pointer' }} onClick={() => navigate('/dashboard')}>Home</span>
+        <span className="sep">&gt;</span>
+        <span>Safety & Moderation</span>
+        <span className="sep">&gt;</span>
+        <span className="current">🚩 Report User</span>
+      </div>
+    );
+  };
 
   return (
     <header className="header">
-      <div className="breadcrumb">
-        <span>Pro Gamers</span>
-        <span className="sep">›</span>
-        <span>#general</span>
-        <span className="sep">›</span>
-        <span className="current">🚩 Report Content</span>
-      </div>
+      {renderBreadcrumb()}
       <div className="header-actions">
-        <div className="icon-btn">
+        <div className="icon-btn" title="Notifications">
           🔔<div className="notif-dot"></div>
         </div>
         <div

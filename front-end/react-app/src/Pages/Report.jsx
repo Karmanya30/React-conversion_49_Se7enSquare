@@ -43,7 +43,7 @@ export default function Report() {
   const userInitials = (currentUser.firstName?.slice(0, 2) || 'US').toUpperCase();
 
   return (
-    <AppShell customHeader={<ReportHeader userInitials={userInitials} />}>
+    <AppShell customHeader={<ReportHeader userInitials={userInitials} target={selectedTarget} />}>
       <div className="page-wrap">
         <div className="report-container">
           <ReportStepper step={step} submitted={submitted} />

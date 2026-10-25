@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { apiRequest } from '../../../services/api';
 
 /**
@@ -8,12 +8,12 @@ import { apiRequest } from '../../../services/api';
 export default function useAdminCommunities(showToast) {
   const [communities, setCommunities] = useState([]);
 
-  const refreshCommunities = async () => {
+  const refreshCommunities = useCallback(async () => {
     try {
       const data = await apiRequest('/communities');
       setCommunities(Array.isArray(data) ? data : []);
     } catch { /* leave current list */ }
-  };
+  }, []);
 
   const suspendCommunity = async (communityId, reason) => {
     const community = communities.find((c) => c.id === communityId);
@@ -33,13 +33,11 @@ export default function useAdminCommunities(showToast) {
 
   const reinstateCommunity = async (communityId) => {
     const community = communities.find((c) => c.id === communityId);
-    if (!window.confirm(`Reinstate "${community?.name || `community #${communityId}`}"?`)) return;
     try {
       await apiRequest(`/admin/communities/${communityId}/reinstate`, {
         method: 'POST',
-        body: JSON.stringify({ reason: 'Reinstated by admin' }),
       });
-      showToast('✅ Community reinstated');
+      showToast(`✓ "${community?.name || `community #${communityId}`}" reinstated`);
       await refreshCommunities();
     } catch (err) {
       showToast(`❌ ${err.message}`);

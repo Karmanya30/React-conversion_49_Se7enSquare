@@ -121,7 +121,8 @@ export default function AdminDashboard() {
       } catch { /* keep defaults */ }
     }
     loadStats();
-  }, [refreshUsers, refreshCommunities, refreshReports]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Recalculate platform stats strictly from live data
   useEffect(() => {

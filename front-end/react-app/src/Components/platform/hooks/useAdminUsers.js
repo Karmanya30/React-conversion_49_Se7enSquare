@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { apiRequest, getStoredUser } from '../../../services/api';
 
 /**
@@ -26,16 +26,16 @@ export default function useAdminUsers(showToast) {
     });
   }, [users, userSearch, userRoleFilter]);
 
-  const refreshUsers = async () => {
+  const refreshUsers = useCallback(async () => {
     try {
       const data = await apiRequest('/users');
       setUsers(Array.isArray(data) ? data : []);
     } catch { /* leave current list */ }
-  };
+  }, []);
 
   const updateUserRole = async (userId, newRole) => {
     if (userId === adminUser?.id) {
-      showToast('❌ Cannot change your own role');
+      showToast('⚠️ Cannot change your own role');
       return;
     }
     try {
@@ -43,29 +43,24 @@ export default function useAdminUsers(showToast) {
         method: 'PATCH',
         body: JSON.stringify({ role: newRole }),
       });
-      setEditingUser(null);
-      showToast(`✓ Role updated to ${newRole}`);
+      showToast('✓ Role updated');
       await refreshUsers();
+      setEditingUser(null);
     } catch (err) {
       showToast(`❌ ${err.message}`);
     }
   };
 
   const suspendUser = async (userId, reason) => {
-    if (userId === adminUser?.id) {
-      showToast('❌ Cannot suspend your own account');
-      return;
-    }
-    const targetUser = users.find((u) => u.id === userId);
-    const defaultReason = reason || 'Violation of community guidelines';
-    const r = window.prompt(`Suspend ${targetUser?.username || `user #${userId}`}?\nEnter reason:`, defaultReason);
+    const user = users.find((u) => u.id === userId);
+    const r = reason || window.prompt(`Reason for suspending @${user?.username || userId}:`);
     if (!r?.trim()) return;
     try {
       await apiRequest(`/users/${userId}/suspend`, {
         method: 'POST',
         body: JSON.stringify({ reason: r.trim() }),
       });
-      showToast('⚠️ User suspended');
+      showToast(`⚠️ @${user?.username || userId} suspended`);
       await refreshUsers();
     } catch (err) {
       showToast(`❌ ${err.message}`);
@@ -73,20 +68,15 @@ export default function useAdminUsers(showToast) {
   };
 
   const banUser = async (userId, reason) => {
-    if (userId === adminUser?.id) {
-      showToast('❌ Cannot ban your own account');
-      return;
-    }
-    const targetUser = users.find((u) => u.id === userId);
-    const defaultReason = reason || 'Repeated policy violations';
-    const r = window.prompt(`Permanently ban @${targetUser?.username || `user #${userId}`}?\nEnter reason:`, defaultReason);
+    const user = users.find((u) => u.id === userId);
+    const r = reason || window.prompt(`Reason for permanently banning @${user?.username || userId}:`);
     if (!r?.trim()) return;
     try {
       await apiRequest(`/users/${userId}/ban`, {
         method: 'POST',
         body: JSON.stringify({ reason: r.trim() }),
       });
-      showToast(`⛔ User banned`);
+      showToast(`⛔ @${user?.username || userId} banned`);
       await refreshUsers();
     } catch (err) {
       showToast(`❌ ${err.message}`);
@@ -94,14 +84,12 @@ export default function useAdminUsers(showToast) {
   };
 
   const reinstateUser = async (userId) => {
-    const targetUser = users.find((u) => u.id === userId);
-    if (!window.confirm(`Reinstate ${targetUser?.username || `user #${userId}`}? Their account will be unlocked.`)) return;
+    const user = users.find((u) => u.id === userId);
     try {
       await apiRequest(`/users/${userId}/reinstate`, {
         method: 'POST',
-        body: JSON.stringify({ reason: 'Reinstated by admin' }),
       });
-      showToast('✅ User reinstated');
+      showToast(`✓ @${user?.username || userId} reinstated`);
       await refreshUsers();
     } catch (err) {
       showToast(`❌ ${err.message}`);

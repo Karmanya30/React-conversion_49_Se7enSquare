@@ -42,9 +42,9 @@ export default function CommunityRulesWidget({ community, rules }) {
             <div className="report-text">Use the report button on any message or contact a moderator directly.</div>
             <button
               className="report-btn"
-              onClick={() => navigate(`/report?community=${community.id}&cname=${encodeURIComponent(community.name)}`)}
+              onClick={() => navigate('/report')}
             >
-              🚩 Report an Issue
+              🚩 Report a Violation
             </button>
           </div>
         </div>

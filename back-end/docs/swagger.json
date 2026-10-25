@@ -2165,6 +2165,75 @@
         ]
       }
     },
+    "/api/appeals/{id}/approved": {
+      "post": {
+        "operationId": "AppealsController_approveAppealPost",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "appeals"
+        ]
+      }
+    },
+    "/api/appeals/{id}/rejected": {
+      "post": {
+        "operationId": "AppealsController_rejectAppealPost",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "appeals"
+        ]
+      }
+    },
+    "/api/appeals/{id}/{status}": {
+      "post": {
+        "operationId": "AppealsController_reviewAppealPost",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "appeals"
+        ]
+      }
+    },
     "/api/messages": {
       "get": {
         "operationId": "MessagesController_findAll",

@@ -1,7 +1,7 @@
 import React from 'react';
 
 /**
- * Panel 1: Select or confirm content/target to report.
+ * Panel 1: Select or confirm user to report.
  */
 export default function TargetStep({
   selectedTarget,
@@ -18,53 +18,52 @@ export default function TargetStep({
           <div id="contextTargetWrap">
             <div className="panel-title">Confirm what you're reporting</div>
             <div className="panel-sub">
-              Reports are anonymous and reviewed by community moderators within 24 hours.
+              Reports are anonymous and reviewed by moderators within 24 hours.
             </div>
+
             {selectedTarget.type === 'user' && (
-              <div className="user-preview">
+              <div className="user-preview" style={{ display: 'flex' }}>
                 <div className="up-av" id="ctxUserAv">
-                  {selectedTarget.name?.slice(0, 2).toUpperCase() || '?'}
+                  {selectedTarget.name ? selectedTarget.name.slice(0, 2).toUpperCase() : 'US'}
                 </div>
                 <div className="up-info">
                   <div className="up-name" id="ctxUserName">{selectedTarget.name}</div>
-                  <div className="up-meta">User</div>
+                  <div className="up-meta">User &bull; ID: #{selectedTarget.id}</div>
                 </div>
                 <div className="up-flag">Selected</div>
               </div>
             )}
+
             {selectedTarget.type === 'message' && (
               <div className="msg-preview">
                 <div className="mp-av">💬</div>
                 <div className="mp-body">
+                  <div className="mp-header">
+                    <span className="mp-name">{selectedTarget.author ? `@${selectedTarget.author}` : 'Chat Message'}</span>
+                    <span className="mp-ch">Selected Message</span>
+                  </div>
                   <div className="mp-text" id="ctxMsgText">{selectedTarget.text || 'Message content'}</div>
                 </div>
                 <div className="mp-flag">Selected</div>
               </div>
             )}
-            {selectedTarget.type === 'community' && (
-              <div className="user-preview">
-                <div className="up-av" id="ctxCommIcon">🏘️</div>
-                <div className="up-info">
-                  <div className="up-name" id="ctxCommName">{selectedTarget.name}</div>
-                </div>
-                <div className="up-flag">Selected</div>
-              </div>
-            )}
-            <div className="btn-row" style={{ marginTop: '16px' }}>
+
+            <div className="btn-row" style={{ marginTop: '20px' }}>
               <button className="btn-back" onClick={() => setSelectedTarget(null)}>
-                Report something else instead
+                Report someone else instead
               </button>
               <button className="btn-next" onClick={() => goStep(2)}>
-                Choose Reason →
+                Choose Reason &rarr;
               </button>
             </div>
           </div>
         ) : (
-          <div id="userSearchWrap">
+          <div id="targetSelectWrap">
             <div className="panel-title">Who are you reporting?</div>
             <div className="panel-sub">
-              Search by username, or paste a numeric User ID directly. To report a specific message, use "Report Message" from inside the channel instead.
+              Search by username, or paste a numeric User ID directly. To report a specific chat message, use "Report Message" directly from inside the chat channel.
             </div>
+
             <div className="additional-field">
               <label>Search users or enter a User ID</label>
               <input
@@ -88,10 +87,11 @@ export default function TargetStep({
                     alignItems: 'center',
                     gap: '12px',
                     padding: '12px',
-                    background: 'var(--bg-card,#151d2f)',
+                    background: 'var(--bg-card, #151d2f)',
                     borderRadius: '10px',
                     cursor: 'pointer',
-                    border: '1px solid var(--border,rgba(255,255,255,0.06))',
+                    border: '1px solid var(--border, rgba(255,255,255,0.06))',
+                    transition: 'background 0.15s ease',
                   }}
                   onClick={() => setSelectedTarget({ type: 'user', id: u.id, name: u.name || u.username })}
                 >
@@ -111,12 +111,18 @@ export default function TargetStep({
                   >
                     {(u.name || u.username).slice(0, 2).toUpperCase()}
                   </div>
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: '14px' }}>{u.name || u.username}</div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-3,#666)' }}>@{u.username}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 600, fontSize: '14px', color: '#fff' }}>{u.name || u.username}</div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-3, #666)' }}>@{u.username} &bull; ID: #{u.id}</div>
                   </div>
+                  <span style={{ fontSize: '12px', color: '#6366f1', fontWeight: 600 }}>Select &rarr;</span>
                 </div>
               ))}
+              {userSearch && searchResults.length === 0 && (
+                <div style={{ fontSize: '13px', color: '#8b949e', padding: '12px', textAlign: 'center' }}>
+                  No users found matching "{userSearch}"
+                </div>
+              )}
             </div>
           </div>
         )}
